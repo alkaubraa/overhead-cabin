@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16202e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cabin">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Overhead Cabin</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--ink:#16202e;--mute:#6b7685;--line:#e3e6ea;--acc:#1f6f8b;--accink:#fff;--good:#1b7f4b;--warn:#b86e00;--bad:#b3261e;--info:#4a56c4;--chip:#eef1f4}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1620;--card:#18222f;--ink:#e8edf3;--mute:#93a0b0;--line:#26323f;--acc:#4aa8c8;--accink:#06202b;--good:#52c487;--warn:#f0a840;--bad:#ff8a80;--info:#97a1ff;--chip:#223040}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding-top:env(safe-area-inset-top)}
+#app{display:flex;flex-direction:column;height:100%}
+header{padding:10px 14px 8px;display:flex;align-items:center;gap:10px;background:var(--bg)}
+header h1{font-size:18px;margin:0;flex:1}
+header small{display:block;color:var(--mute);font-size:11px;font-weight:400}
+button{font:inherit;color:inherit}
+.btn{background:var(--acc);color:var(--accink);border:0;border-radius:10px;padding:8px 14px;font-weight:600}
+.btn.ghost{background:var(--chip);color:var(--ink)}
+main{flex:1;overflow-y:auto;padding:4px 14px 90px;-webkit-overflow-scrolling:touch}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;background:none;border:0;padding:12px 2px;font-size:11px;color:var(--mute)}
+nav button.on{color:var(--acc);font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin:0 0 10px}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.grid .card{margin:0}
+.k{color:var(--mute);font-size:12px}
+.v{font-size:20px;font-weight:700}
+.sec{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);margin:14px 2px 6px}
+.chip{display:inline-block;background:var(--chip);border-radius:20px;padding:1px 9px;font-size:11px;font-weight:600;margin-left:6px;white-space:nowrap}
+.chip.good{color:var(--good)}.chip.warn{color:var(--warn)}.chip.bad{color:var(--bad)}.chip.info{color:var(--info)}
+input,select{width:100%;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;margin:4px 0 8px}
+.bar{height:8px;border-radius:6px;background:var(--chip);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--acc)}
+.item{cursor:pointer}
+.item .sub{color:var(--mute);font-size:12px}
+.det{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:13px}
+.det div{display:flex;justify-content:space-between;gap:10px;padding:2px 0}
+.det div span:first-child{color:var(--mute)}
+.det div span:last-child{text-align:right;word-break:break-word}
+.muted{opacity:.55}
+.toast{color:var(--mute);font-size:12px;padding:0 2px 8px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;z-index:5}
+.sheet{background:var(--bg);width:100%;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));max-height:90%;overflow:auto}
+.tgl{display:flex;align-items:center;gap:8px;margin:0 2px 10px;color:var(--mute);font-size:13px}
+.tgl input{width:auto;margin:0}
+a{color:var(--acc)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+(function(){
+'use strict';
+var $=function(s){return document.querySelector(s)};
+var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+var num=function(v){return typeof v==='number'?v:(v===''||v==null?null:Number(v))};
+var bad=function(n){return n==null||isNaN(n)};
+var rp=function(v){var n=num(v);return bad(n)?'-':'Rp '+Math.round(n).toLocaleString('id-ID')};
+var yen=function(v){var n=num(v);return bad(n)?'-':'\u00a5'+n.toLocaleString('en-US')};
+var pct=function(v){var n=num(v);return bad(n)?'-':Math.round(n*100)+'%'};
+var val=function(v){return v===''||v==null?'-':esc(v)};
+var ls={get:function(k){try{return localStorage.getItem(k)}catch(e){return null}},set:function(k,v){try{localStorage.setItem(k,v)}catch(e){}},del:function(k){try{localStorage.removeItem(k)}catch(e){}}};
+
+var S={tab:'home',q:'',onlyBuy:false,open:{},calc:false,msg:'',loading:false,setup:false};
+var cfg={url:ls.get('oc_url')||'',key:ls.get('oc_key')||''};
+var D=null,AT=ls.get('oc_at');
+try{D=JSON.parse(ls.get('oc_data')||'null')}catch(e){D=null}
+
+function chip(t,kind){if(t===''||t==null)return '';if(!kind){var s=String(t).toLowerCase();
+ kind=/^(paid|bought|done|delivered|shipped|trusted)/.test(s)?'good':/(unpaid|collect|buy |need|waiting|partial)/.test(s)?'warn':/(sold out|cancel)/.test(s)?'bad':/(overpaid|refund|new)/.test(s)?'info':''}
+ return '<span class="chip '+kind+'">'+esc(t)+'</span>'}
+function has(s,q){return String(s==null?'':s).toLowerCase().indexOf(q)>-1}
+function det(pairs){return '<div class="det">'+pairs.map(function(p){return '<div><span>'+esc(p[0])+'</span><span>'+p[1]+'</span></div>'}).join('')+'</div>'}
+function when(){if(!AT)return 'Never synced';var d=new Date(AT);return 'Synced '+d.toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}
+
+function sync(){
+ if(!cfg.url||!cfg.key){S.setup=true;render();return Promise.resolve()}
+ S.loading=true;S.msg='';render();
+ var ctl=new AbortController();var t=setTimeout(function(){ctl.abort()},25000);
+ return fetch(cfg.url+'?action=snapshot&key='+encodeURIComponent(cfg.key),{signal:ctl.signal})
+ .then(function(r){return r.json()})
+ .then(function(j){clearTimeout(t);if(!j.ok)throw new Error(j.error||'Unknown error');D=j.data;AT=new Date().toISOString();ls.set('oc_data',JSON.stringify(D));ls.set('oc_at',AT);S.msg=''})
+ .catch(function(e){clearTimeout(t);S.msg=(navigator.onLine?'Could not sync ('+e.message+'). ':'Offline. ')+'Showing saved data.'})
+ .then(function(){S.loading=false;render()});
+}
+
+/* ---------- views ---------- */
+function stat(k,v){return '<div class="card"><div class="k">'+esc(k)+'</div><div class="v">'+v+'</div></div>'}
+function home(){
+ var h=D.home,a=h.actions,u=h.units,m=h.money,p=h.people;
+ var prog=Math.max(0,Math.min(100,Math.round((num(u.progress)||0)*100)));
+ var checks=h.checks.filter(function(c){return c.label==='Overall'})[0];
+ return '<div class="card"><div class="row"><div><b>'+val(D.settings.batch)+'</b><div class="k">Ship from '+val(D.settings.shipFrom)+'</div></div><div style="text-align:right"><b>'+val(h.daysText)+'</b><div class="k">Rate '+val(h.rate)+'</div></div></div>'
+ +'<div style="margin-top:10px"><button class="btn" data-act="calc" style="width:100%">Price calculator</button></div></div>'
+ +'<div class="sec">Today\'s actions</div><div class="grid">'
+ +stat('Collect payment',val(a.collect)+(num(a.onHold)?' <span class="k">('+esc(a.onHold)+' on hold)</span>':''))
+ +stat('Still waiting on items',val(a.waitingItems))
+ +stat('Ready to pack',val(a.readyToPack))
+ +stat('Overpaid (refund)',val(a.overpaid))
+ +'</div><div class="card"><div class="row"><span class="k">Shipping fees to collect</span><b>'+rp(a.shippingToCollect)+'</b></div></div>'
+ +'<div class="sec">Shopping progress</div><div class="card"><div class="row"><span>'+val(u.bought)+' bought of '+val(u.ordered)+' ordered</span><b>'+prog+'%</b></div><div class="bar"><i style="width:'+prog+'%"></i></div><div class="k" style="margin-top:6px">Still to buy: '+val(u.toBuy)+' units</div></div>'
+ +'<div class="sec">Money</div><div class="card">'
+ +'<div class="row"><span class="k">Billable items</span><b>'+rp(m.billable)+'</b></div>'
+ +'<div class="row"><span class="k">Collected</span><b>'+rp(m.collected)+'</b></div>'
+ +'<div class="row"><span class="k">Still to collect</span><b>'+rp(m.toCollect)+'</b></div>'
+ +'<div class="row"><span class="k">Credit / refunds due</span><b>'+rp(m.credit)+'</b></div>'
+ +'<div class="row"><span class="k">Realised profit</span><b>'+rp(p.profit)+' <span class="k">('+pct(p.margin)+')</span></b></div></div>'
+ +'<div class="sec">Shopping by store</div><div class="card">'+(h.stores.length?h.stores.map(function(s){return '<div class="row"><span>'+esc(s.store)+'</span><span class="k">to buy '+val(s.toBuy)+' | bought '+val(s.bought)+'</span></div>'}).join(''):'<span class="k">No data</span>')+'</div>'
+ +'<div class="sec">Customers</div><div class="card"><div class="row"><span class="k">Total customers</span><b>'+val(p.customers)+'</b></div>'
+ +h.pipeline.filter(function(x){return num(x.customers)}).map(function(x){return '<div class="row"><span class="k">'+esc(x.label)+'</span><b>'+esc(x.customers)+'</b></div>'}).join('')+'</div>'
+ +(checks?'<div class="sec">Data check</div><div class="card"><b>'+val(checks.value)+'</b></div>':'');
+}
+function bar(ph){return '<input id="q" type="search" placeholder="'+esc(ph)+'" value="'+esc(S.q)+'" autocomplete="off">'}
+function catalog(){return bar('Search product or store')+'<div id="list">'+catalogList()+'</div>'}
+function catalogList(){
+ var q=S.q.toLowerCase();
+ var L=D.products.filter(function(p){return !q||has(p.name,q)||has(p.store,q)});
+ return L.map(function(p,i){var id='p'+p.name;var o=S.open[id];
+  return '<div class="card item" data-open="'+esc(id)+'"><div class="row"><b>'+esc(p.name)+'</b><b>'+(p.selling!==''?rp(p.selling):'-')+'</b></div>'
+  +'<div class="sub">'+esc(p.store)+' | '+yen(p.yen)+(num(p.ordered)?' | ordered '+esc(p.ordered):'')+chip(p.ig==='Posted'?'Posted':'',p.ig==='Posted'?'good':'')+'</div>'
+  +(o?det([['Surcharge',rp(p.surcharge||0)],['Manual IDR price',p.manualIdr===''?'-':rp(p.manualIdr)],['IG label',val(p.label)],['Est. buying cost',rp(p.cost)],['Est. profit',rp(p.profit)+' ('+pct(p.margin)+')'],['IG status',val(p.ig)],['Notes',val(p.notes)],['Link',p.link?'<a href="'+esc(p.link)+'" target="_blank" rel="noopener">Open</a>':'-']]):'')+'</div>'}).join('')||'<div class="k">Nothing found</div>';
+}
+function customers(){return bar('Search customer')+'<div id="list">'+customerList()+'</div>'}
+function customerList(){
+ var q=S.q.toLowerCase();
+ return D.customers.filter(function(c){return !q||has(c.name,q)}).map(function(c){var id='c'+c.name;var o=S.open[id];
+  var lines='',pays='';
+  if(o){lines=D.orders.filter(function(x){return x.customer===c.name}).map(function(x){return [esc(x.product)+' x'+esc(x.qty),chip(x.status)]});
+   pays=D.payments.filter(function(x){return x.customer===c.name}).map(function(x){return [esc(x.date),rp(x.amount)+(x.shipOnly==='Yes'?' (shipping)':'')]})}
+  return '<div class="card item" data-open="'+esc(id)+'"><div class="row"><b>'+esc(c.name)+chip(c.type)+'</b><b>'+rp(c.balance)+'</b></div>'
+  +'<div class="sub">'+esc(c.next||'')+' '+chip(c.status,'')+'</div>'
+  +(o?det([['Contact',val(c.contact)],['Address',val(c.address)],['Courier',val(c.courier)],['Units (active / bought / waiting / to buy)',val(c.units)+' / '+val(c.bought)+' / '+val(c.waiting)+' / '+val(c.toBuy)],['Billable items',rp(c.billable)],['Items paid',rp(c.itemsPaid)],['Shipping fee / paid',rp(c.shipFee)+' / '+rp(c.shipPaid)],['Payment status',val(c.payStatus)],['Notes',val(c.notes)]])
+   +(lines.length?det([['Order lines','']].concat(lines)):'')+(pays.length?det([['Payments','']].concat(pays)):''):'')+'</div>'}).join('')||'<div class="k">Nothing found</div>';
+}
+function orders(){return bar('Search customer or product')+'<div id="list">'+orderList()+'</div>'}
+function orderList(){
+ var q=S.q.toLowerCase();
+ return D.orders.slice().reverse().filter(function(o){return !q||has(o.customer,q)||has(o.product,q)}).map(function(o){
+  return '<div class="card'+(o.cancel==='Yes'?' muted':'')+'"><div class="row"><b>'+esc(o.customer)+'</b><b>'+rp(o.gross)+'</b></div>'
+  +'<div>'+esc(o.product)+' x'+esc(o.qty)+chip(o.status)+'</div>'
+  +'<div class="sub">'+esc(o.date||'')+(o.note?' | '+esc(o.note):'')+' | bought '+val(o.bought)+', to buy '+val(o.toBuy)+', waiting pay '+val(o.waiting)+'</div></div>'}).join('')||'<div class="k">Nothing found</div>';
+}
+function shopping(){return '<label class="tgl"><input type="checkbox" id="onlyBuy"'+(S.onlyBuy?' checked':'')+'> Only products still to buy</label><div id="list">'+shopList()+'</div>'}
+function shopList(){
+ var L=D.shopping.filter(function(s){return !S.onlyBuy||num(s.toBuy)>0});
+ var by={};L.forEach(function(s){var k=s.store||'No store';(by[k]=by[k]||[]).push(s)});
+ var keys=Object.keys(by).sort();
+ return keys.map(function(k){var tb=by[k].reduce(function(a,s){return a+(num(s.toBuy)||0)},0);
+  return '<div class="sec">'+esc(k)+' | to buy '+tb+'</div>'+by[k].map(function(s){
+   return '<div class="card"><div class="row"><b>'+esc(s.product)+'</b><b>'+val(s.toBuy)+' to buy</b></div>'
+   +'<div>'+chip(s.status)+(s.soldOut?chip('Sold out','bad'):'')+'</div>'
+   +'<div class="sub">Need now '+val(s.need)+' | waiting payment '+val(s.waiting)+' | bought '+val(s.bought)+' | paid '+yen(s.paidYen)+'</div></div>'}).join('')}).join('')||'<div class="k">Nothing to show</div>';
+}
+function payments(){
+ var tot=D.payments.reduce(function(a,p){return a+(num(p.amount)||0)},0);
+ return '<div class="card"><div class="k">Total received</div><div class="v">'+rp(tot)+'</div></div>'+bar('Search customer')+'<div id="list">'+payList()+'</div>';
+}
+function payList(){
+ var q=S.q.toLowerCase();
+ return D.payments.slice().reverse().filter(function(p){return !q||has(p.customer,q)}).map(function(p){
+  return '<div class="card"><div class="row"><b>'+esc(p.customer)+'</b><b>'+rp(p.amount)+'</b></div><div class="sub">'+esc(p.date||'')+(p.shipOnly==='Yes'?' | shipping only':'')+(p.note?' | '+esc(p.note):'')+'</div></div>'}).join('')||'<div class="k">Nothing found</div>';
+}
+var LISTS={catalog:catalogList,customers:customerList,orders:orderList,shopping:shopList,payments:payList};
+var VIEWS={home:home,catalog:catalog,customers:customers,orders:orders,shopping:shopping,payments:payments};
+var TITLES={home:'Home',catalog:'Catalog',customers:'Customers',orders:'Orders',shopping:'Shopping',payments:'Payments'};
+
+function setupView(){
+ return '<div class="card"><b>Connect to your sheet</b><div class="k" style="margin:6px 0 10px">Paste the Web app URL (ends with /exec) and your secret key. They are saved only on this phone.</div>'
+ +'<label class="k">Web app URL</label><input id="cu" type="url" placeholder="https://script.google.com/macros/s/.../exec" value="'+esc(cfg.url)+'" autocomplete="off" autocapitalize="off">'
+ +'<label class="k">Secret key</label><input id="ck" type="password" value="'+esc(cfg.key)+'" autocomplete="off" autocapitalize="off">'
+ +'<button class="btn" data-act="save" style="width:100%">Save and sync</button>'
+ +(cfg.url?'<button class="btn ghost" data-act="cancelSetup" style="width:100%;margin-top:8px">Cancel</button>':'')+'</div>';
+}
+function calcSheet(){
+ var s=(D&&D.settings)||null;
+ if(!s)return '<div class="overlay" data-act="closeCalc"><div class="sheet"><b>Calculator</b><p class="k">Sync once while online so the rates are saved on this phone.</p></div></div>';
+ var opts=(s.surcharges||[]).map(function(x){return '<option value="'+esc(x)+'">'+rp(x)+'</option>'}).join('');
+ return '<div class="overlay" id="ov"><div class="sheet"><div class="row"><b>Price calculator</b><button class="btn ghost" data-act="closeCalc">Close</button></div>'
+ +'<label class="k">Price in yen</label><input id="c1" type="number" inputmode="decimal" placeholder="e.g. 2500">'
+ +'<label class="k">Qty</label><input id="c2" type="number" inputmode="numeric" value="1">'
+ +'<label class="k">Bulky surcharge (per item)</label><select id="c3">'+opts+'</select>'
+ +'<div class="card" id="cr"><span class="k">Enter a yen price</span></div></div></div>';
+}
+function calcUpdate(){
+ var s=D.settings,p=num($('#c1').value),q=num($('#c2').value)||1,sc=num($('#c3').value)||0,r=$('#cr');
+ if(bad(p)||p<=0){r.innerHTML='<span class="k">Enter a yen price</span>';return}
+ var t1=p<=num(s.threshold),base=t1?p*num(s.t1Rate)+num(s.t1Fee):p*num(s.t2Rate),unit=base+sc;
+ r.innerHTML='<div class="row"><span class="k">Rule used</span><span>'+(t1?'Tier 1 (up to '+yen(s.threshold)+')':'Tier 2 (above '+yen(s.threshold)+')')+'</span></div>'
+  +'<div class="row"><span class="k">Converted price</span><b>'+rp(base)+'</b></div>'
+  +'<div class="row"><span class="k">Unit selling price</span><b>'+rp(unit)+'</b></div>'
+  +'<div class="row"><span class="k">Total for '+q+'</span><b class="v">'+rp(unit*q)+'</b></div>';
+}
+
+function render(){
+ var app=$('#app'),body='';
+ if(S.setup||!cfg.url||!cfg.key){body=setupView()}
+ else if(!D){body='<div class="card">'+(S.loading?'Loading from your sheet...':'No saved data yet.')+'</div>'+(S.msg?'<div class="toast">'+esc(S.msg)+'</div>':'')}
+ else{body=(S.msg?'<div class="toast">'+esc(S.msg)+'</div>':'')+VIEWS[S.tab]()}
+ app.innerHTML='<header><h1>'+TITLES[S.tab]+'<small>'+(S.loading?'Syncing...':esc(when()))+'</small></h1><button class="btn ghost" data-act="sync">Sync</button><button class="btn ghost" data-act="setup" aria-label="Settings">...</button></header>'
+  +'<main id="main">'+body+'</main>'
+  +'<nav>'+Object.keys(TITLES).map(function(t){return '<button data-tab="'+t+'"'+(S.tab===t?' class="on"':'')+'>'+TITLES[t]+'</button>'}).join('')+'</nav>'
+  +(S.calc?calcSheet():'');
+}
+
+document.addEventListener('click',function(e){
+ var t=e.target.closest('[data-tab],[data-act],[data-open]');if(!t)return;
+ if(t.dataset.tab){S.tab=t.dataset.tab;S.q='';render();var m=$('#main');if(m)m.scrollTop=0;return}
+ if(t.dataset.open){S.open[t.dataset.open]=!S.open[t.dataset.open];$('#list').innerHTML=LISTS[S.tab]();return}
+ var a=t.dataset.act;
+ if(a==='sync'){S.setup=false;sync()}
+ else if(a==='setup'){S.setup=true;render()}
+ else if(a==='cancelSetup'){S.setup=false;render()}
+ else if(a==='save'){var u=$('#cu').value.trim(),k=$('#ck').value.trim();
+  if(u.indexOf('https://script.google.com/')!==0){alert('The URL should start with https://script.google.com/');return}
+  if(!k){alert('Please enter your secret key');return}
+  cfg={url:u,key:k};ls.set('oc_url',u);ls.set('oc_key',k);S.setup=false;sync()}
+ else if(a==='calc'){S.calc=true;render();calcUpdate()}
+ else if(a==='closeCalc'){S.calc=false;render()}
+});
+document.addEventListener('input',function(e){
+ var id=e.target.id;
+ if(id==='q'){S.q=e.target.value;$('#list').innerHTML=LISTS[S.tab]()}
+ else if(id==='c1'||id==='c2'||id==='c3'){calcUpdate()}
+});
+document.addEventListener('change',function(e){
+ if(e.target.id==='onlyBuy'){S.onlyBuy=e.target.checked;$('#list').innerHTML=shopList()}
+ else if(e.target.id==='c3'){calcUpdate()}
+});
+window.addEventListener('online',function(){if(cfg.url&&cfg.key)sync()});
+
+render();
+if(cfg.url&&cfg.key)sync();
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){})}
+})();
+</script>
+</body>
+</html>

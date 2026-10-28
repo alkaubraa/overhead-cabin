@@ -102,7 +102,7 @@ function home(){
  return '<div class="card"><div class="row"><div><b>'+val(D.settings.batch)+'</b><div class="k">Ship from '+val(D.settings.shipFrom)+'</div></div><div style="text-align:right"><b>'+val(h.daysText)+'</b><div class="k">Rate '+val(h.rate)+'</div></div></div>'
  +'<div style="margin-top:10px"><button class="btn" data-act="calc" style="width:100%">Price calculator</button></div></div>'
  +'<div class="sec">Today\'s actions</div><div class="grid">'
- +stat('Collect payment',val(a.collect)+(num(a.onHold)?' <span class="k">('+esc(a.onHold)+' required payment before proceed)</span>':''))
+ +stat('Collect payment',val(a.collect)+(num(a.onHold)?' <span class="k">('+esc(a.onHold)+' required to continue)</span>':''))
  +stat('Still waiting on items to shop',val(a.waitingItems))
  +stat('Ready to pack',val(a.readyToPack))
  +stat('Overpaid (refund)',val(a.overpaid))

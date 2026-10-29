@@ -644,8 +644,8 @@ document.addEventListener('click',function(e){
  else if(a==='newCustomer')openCustomer();
  else if(a==='editCustomer')openCustomer(n);
  else if(a==='saveCustomer')saveCustomer(!!t.dataset.edit);
- else if(a==='logBuy')openBuy(Number(el.dataset.row));
- else if(a==='saveBuy')saveBuy(Number(el.dataset.row));
+ else if(a==='logBuy')openBuy(Number(t.dataset.row));
+ else if(a==='saveBuy')saveBuy(Number(t.dataset.row));
  else if(a==='inc'||a==='dec'){var f=$('#f_b'),c=Number(f.value)||0;f.value=Math.max(0,c+(a==='inc'?1:-1))}
  else if(a==='editOrder')openOrderEdit(r);
  else if(a==='saveOrderEdit')saveOrderEdit(r);

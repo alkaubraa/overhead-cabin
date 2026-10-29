@@ -333,23 +333,23 @@ function downloadInvoiceImage(name){
    text('Qty',W-pad-330,y,'bold 21px Arial',muted);
    amount('Amount',W-pad,y,'bold 21px Arial',muted);
    y+=22;line(y);y+=48;
-   if(!orders.length){text('No active order items',pad,y,'23px Arial',ink);y+=rowH;line(y)}
+   if(!orders.length){text('No active order items',pad,y,'23px Arial',ink);y+=rowH;line(y-rowH/2)}
    orders.forEach(function(o){
      text(fitText(o.product,W-2*pad-440,'23px Arial'),pad,y,'23px Arial',ink);
      text(o.qty||1,W-pad-330,y,'23px Arial',ink);
      amount(rp(o.billable!=null&&o.billable!==''?o.billable:o.gross),W-pad,y,'23px Arial',ink);
-     y+=rowH;line(y);
+     y+=rowH;line(y-rowH/2);
    });
    y+=52;text('PAYMENTS',pad,y,'bold 27px Arial',ink);y+=40;
    text('Date / type',pad,y,'bold 20px Arial',muted);
    text('Note',W-pad-450,y,'bold 20px Arial',muted);
    amount('Amount',W-pad,y,'bold 20px Arial',muted);y+=22;line(y);y+=44;
-   if(!pays.length){text('No payments recorded',pad,y,'22px Arial',ink);y+=payRowH;line(y)}
+   if(!pays.length){text('No payments recorded',pad,y,'22px Arial',ink);y+=payRowH;line(y-payRowH/2)}
    pays.forEach(function(p){
      text((p.date||'')+(p.shipOnly==='Yes'?' · Shipping':' · Payment'),pad,y,'21px Arial',ink);
      text(fitText(p.note||'-',360,'21px Arial'),W-pad-450,y,'21px Arial',ink);
      amount(rp(p.amount),W-pad,y,'21px Arial',ink);
-     y+=payRowH;line(y);
+     y+=payRowH;line(y-payRowH/2);
    });
    y+=44;text('Items total',pad,y,'25px Arial',ink);amount(rp(itemTotal),W-pad,y,'bold 25px Arial',ink);y+=52;
    text('Shipping fee',pad,y,'25px Arial',ink);amount(rp(ship),W-pad,y,'bold 25px Arial',ink);y+=30;

@@ -60,6 +60,10 @@ input[readonly]{opacity:.6}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;z-index:5}
 .sheet{background:var(--bg);width:100%;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));max-height:92%;overflow:auto}
 .tgl{display:flex;align-items:center;gap:8px;margin:0 2px 10px;color:var(--mute);font-size:13px}
+.nm{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;min-width:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.nm .chip,.chips .chip{margin-left:0}
+.chips .chip{padding:3px 10px;font-size:12px}
 .step{display:flex;gap:8px;align-items:center}.step input{margin:4px 0 8px}.step .btn{margin-bottom:4px;padding:10px 16px}
 a{color:var(--acc)}
 </style>
@@ -175,7 +179,8 @@ function home(){
  +'<div class="sec">Shopping by store</div><div class="card">'+(h.stores.length?h.stores.map(function(s){return '<div class="row"><span>'+esc(s.store)+'</span><span class="k">to buy '+val(s.toBuy)+' | bought '+val(s.bought)+'</span></div>'}).join(''):'<span class="k">No data</span>')+'</div>'
  +'<div class="sec">Customers</div><div class="card"><div class="row"><span class="k">Total customers</span><b>'+val(p.customers)+'</b></div>'
  +h.pipeline.filter(function(x){return num(x.customers)}).map(function(x){return '<div class="row"><span class="k">'+esc(x.label)+'</span><b>'+esc(x.customers)+'</b></div>'}).join('')+'</div>'
- +(checks?'<div class="sec">Data check</div><div class="card"><b>'+val(checks.value)+'</b></div>':'');
+ +(checks?'<div class="sec">Data check</div><div class="card"><div class="row"><b class="'+(/all clear/i.test(checks.value)?'t-done':'t-buy')+'">'+val(checks.value)+'</b></div>'
+ +h.checks.filter(function(x){return x.label!=='Overall'&&num(x.value)>0}).map(function(x){return '<div class="row" style="margin-top:6px"><span class="k">'+esc(x.label)+'</span><b>'+esc(x.value)+'</b></div>'}).join('')+'</div>':'');
 }
 function bar(ph){return '<input id="q" type="search" placeholder="'+esc(ph)+'" value="'+esc(S.q)+'" autocomplete="off">'}
 function pend(x){return x.pending?chip('Pending','info'):''}
@@ -194,8 +199,8 @@ function customerList(){
  return VW.customers.filter(function(c){return !q||has(c.name,q)}).map(function(c){var id='c'+c.name,o=S.open[id],lines='',pays='';
   if(o){lines=VW.orders.filter(function(x){return x.customer===c.name}).map(function(x){return [esc(x.product)+' x'+esc(x.qty),chip(x.status)]});
    pays=VW.payments.filter(function(x){return x.customer===c.name}).map(function(x){return [esc(x.date),rp(x.amount)+(x.shipOnly==='Yes'?' (shipping)':'')]})}
-  return '<div class="card item" data-open="'+esc(id)+'"><div class="row"><b>'+esc(c.name)+chip(c.type)+pend(c)+'</b><b>'+rp(c.balance)+'</b></div>'
-  +'<div class="sub">'+chip(c.next).replace('margin-left:6px','')+' '+chip(c.status,'')+'</div>'
+  return '<div class="card item" data-open="'+esc(id)+'"><div class="row" style="align-items:flex-start"><div class="nm"><b>'+esc(c.name)+'</b>'+(c.type?chip(c.type):chip('No type','warn'))+pend(c)+'</div><b>'+rp(c.balance)+'</b></div>'
+  +'<div class="chips">'+chip(c.next)+chip(c.status,'')+'</div>'
   +(o?det([['Contact',val(c.contact)],['Address',val(c.address)],['Courier',val(c.courier)],['Units (active / bought / waiting / to buy)',val(c.units)+' / '+val(c.bought)+' / '+val(c.waiting)+' / '+val(c.toBuy)],['Billable items',rp(c.billable)],['Items paid',rp(c.itemsPaid)],['Shipping fee / paid',rp(c.shipFee)+' / '+rp(c.shipPaid)],['Payment status',val(c.payStatus)],['Notes',val(c.notes)]])
    +(lines.length?det([['Order lines','']].concat(lines)):'')+(pays.length?det([['Payments','']].concat(pays)):'')
    +'<div class="btns"><button class="btn ghost sm" data-act="editCustomer" data-name="'+esc(c.name)+'">Edit</button><button class="btn ghost sm" data-act="newOrder" data-name="'+esc(c.name)+'" data-kind="customer">+ Order</button><button class="btn ghost sm" data-act="newPayment" data-name="'+esc(c.name)+'">+ Payment</button></div>':'')+'</div>'}).join('')||'<div class="k">Nothing found</div>';

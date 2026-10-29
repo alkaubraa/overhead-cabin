@@ -48,6 +48,7 @@ input[readonly]{opacity:.6}
 .bar{height:8px;border-radius:6px;background:var(--chip);overflow:hidden;margin-top:6px}
 .bar i{display:block;height:100%;background:var(--acc)}
 .item{cursor:pointer}
+.shop-brand{margin:14px 0 18px}.shop-brand-head,.shop-model-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;min-width:0}.shop-brand-head{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);padding:0 4px 7px}.shop-brand-head b,.shop-model-head b{font-size:12px;white-space:nowrap}.shop-model{margin:0 0 12px 12px}.shop-model-head{font-size:14px;font-weight:700;padding:7px 0}.shop-variant{display:flex;justify-content:space-between;align-items:baseline;gap:12px;width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--line);border-radius:0;padding:8px 4px 8px 14px;font-size:12px;color:var(--ink)}.shop-variant:before{content:"–";color:var(--mute);margin-right:2px}.shop-variant-detail{flex:1;min-width:0;overflow-wrap:anywhere;color:var(--mute)}.shop-variant-status{white-space:nowrap;font-weight:600}.shop-variant.s-buy{border-left:2px solid var(--warn)}.shop-variant.s-done{border-left:2px solid var(--good)}.shop-variant.s-out{border-left:2px solid var(--bad)}
 .sub{color:var(--mute);font-size:12px}
 .det{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:13px}
 .det div{display:flex;justify-content:space-between;gap:10px;padding:2px 0}
@@ -217,15 +218,32 @@ function orderList(){
 function shopping(){return '<label class="tgl"><input type="checkbox" id="onlyBuy"'+(S.onlyBuy?' checked':'')+'> Only products still to buy</label><div class="sub" style="margin:0 2px 8px">Tap a product to log what you bought.</div><div id="list">'+shopList()+'</div>'}
 function shopList(){
  var L=VW.shopping.filter(function(s){return !S.onlyBuy||num(s.toBuy)>0});
- var g={};L.forEach(function(s){var k=s.store||'No store';(g[k]=g[k]||[]).push(s)});
- return Object.keys(g).sort().map(function(k){var tb=g[k].reduce(function(a,s){return a+(num(s.toBuy)||0)},0);
-  return '<div class="sec row"><span>'+esc(k)+'</span><span class="'+(tb>0?'t-buy':'t-done')+'">'+(tb>0?tb+' to buy':'Done')+'</span></div>'+g[k].map(function(s){
-   var out=s.soldOut==='Sold Out',tb2=num(s.toBuy)||0,st=out?'out':tb2>0?'buy':'done',lab=out?'Sold out':tb2>0?tb2+' to buy':'Done',parts=[];
-   parts.push('Bought '+(num(s.bought)||0)+' of '+(num(s.need)||0));
-   if(s.paidYen!==''&&s.paidYen!=null)parts.push('Paid '+yen(s.paidYen));
-   if(num(s.waiting)>0)parts.push(s.waiting+' waiting for payment');
-   return '<div class="card item s-'+st+'" data-act="logBuy" data-name="'+esc(s.product)+'"><div class="row"><b>'+esc(s.product)+pend(s)+'</b><b class="t-'+st+'">'+lab+'</b></div>'
-   +'<div class="sub">'+(esc(parts.join(' \u00b7 '))||'No units needed yet')+'</div></div>'}).join('')}).join('')||'<div class="k">Nothing to show</div>';
+ /* Compact brand > product > variant/progress hierarchy for mobile. */
+ var brands={};
+ L.forEach(function(s){
+  var raw=String(s.product||'').trim(),bits=raw.split(/\s+/),brand=bits.length>1?bits[0]:((s.store||'Other').trim()||'Other');
+  (brands[brand]=brands[brand]||[]).push(s);
+ });
+ return Object.keys(brands).sort().map(function(brand){
+  var items=brands[brand],brandToBuy=items.reduce(function(a,s){return a+(num(s.toBuy)||0)},0),models={};
+  items.forEach(function(s){var model=String(s.product||'').trim();(models[model]=models[model]||[]).push(s)});
+  var html='<div class="shop-brand"><div class="shop-brand-head"><span>'+esc(brand)+'</span><b class="'+(brandToBuy>0?'t-buy':'t-done')+'">'+(brandToBuy>0?brandToBuy+' to buy':'Done')+'</b></div>';
+  Object.keys(models).sort().forEach(function(model){
+   var variants=models[model],modelToBuy=variants.reduce(function(a,s){return a+(num(s.toBuy)||0)},0);
+   html+='<div class="shop-model"><div class="shop-model-head"><span>'+esc(model)+'</span><b class="'+(modelToBuy>0?'t-buy':'t-done')+'">'+(modelToBuy>0?modelToBuy+' to buy':'Done')+'</b></div>';
+   variants.forEach(function(s){
+    var out=s.soldOut==='Sold Out',tb=num(s.toBuy)||0,st=out?'out':tb>0?'buy':'done';
+    var detail='Bought '+(num(s.bought)||0)+' of '+(num(s.need)||0);
+    if(s.variant)detail=esc(s.variant)+' | '+detail;
+    else if(s.color)detail=esc(s.color)+' | '+detail;
+    if(s.paidYen!==''&&s.paidYen!=null)detail+=' · Paid '+yen(s.paidYen);
+    if(num(s.waiting)>0)detail+=' · '+s.waiting+' waiting for payment';
+    html+='<button class="shop-variant s-'+st+'" data-act="logBuy" data-name="'+esc(s.product)+'"><span class="shop-variant-detail">'+detail+'</span><span class="shop-variant-status t-'+st+'">'+(out?'Sold out':tb>0?tb+' to buy':'Done')+'</span></button>';
+   });
+   html+='</div>';
+  });
+  return html+'</div>';
+ }).join('')||'<div class="k">Nothing to show</div>';
 }
 function payments(){
  var tot=VW.payments.reduce(function(a,p){return a+(num(p.amount)||0)},0);

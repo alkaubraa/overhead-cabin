@@ -106,6 +106,22 @@ a{color:var(--acc)}
 .invoice-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px}.invoice-table th,.invoice-table td{border-bottom:1px solid #e3e6ea;padding:8px 4px;text-align:left}.invoice-table th:last-child,.invoice-table td:last-child{text-align:right}
 @media print{body *{visibility:hidden}.invoice-paper,.invoice-paper *{visibility:visible}.invoice-paper{position:absolute;left:0;top:0;width:100%;margin:0;border:0}}
 
+
+/* Shopping hierarchy layout */
+.shop-brand{display:block;margin:14px 0 20px;min-width:0}
+.shop-brand-head,.shop-model-head{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-width:0}
+.shop-brand-head{font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);font-weight:700;padding:0 2px 10px}
+.shop-brand-head span,.shop-model-head span{min-width:0;overflow-wrap:anywhere}
+.shop-model{display:block;margin:0 0 10px 10px;min-width:0}
+.shop-model-head{font-size:16px;font-weight:700;padding:8px 2px;border-bottom:1px solid var(--line)}
+.shop-variant{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;box-sizing:border-box;text-align:left;margin:0;padding:12px 10px 12px 14px;border:0;border-left:3px solid var(--line);border-radius:0;background:transparent;color:var(--text);font:inherit;min-width:0}
+.shop-variant.s-buy{border-left-color:var(--warn)}
+.shop-variant.s-done{border-left-color:var(--good);opacity:.78}
+.shop-variant.s-out{border-left-color:var(--bad);opacity:.78}
+.shop-variant-detail{flex:1;min-width:0;font-size:13px;line-height:1.45;color:var(--mute);overflow-wrap:anywhere}
+.shop-variant-status{flex:0 0 auto;font-size:12px;font-weight:700;white-space:nowrap}
+.shop-sep{opacity:.65}
+@media(max-width:600px){.shop-brand{margin:12px 0 18px}.shop-model{margin-left:6px}.shop-model-head{font-size:15px}.shop-variant{padding:11px 6px 11px 10px;gap:8px}.shop-variant-detail{font-size:12px}.shop-variant-status{font-size:11px}}
 </style>
 </head>
 <body>
@@ -257,31 +273,30 @@ function orderList(){
 function shopping(){return '<label class="tgl"><input type="checkbox" id="onlyBuy"'+(S.onlyBuy?' checked':'')+'> Only products still to buy</label><div class="sub" style="margin:0 2px 8px">Tap a product to log what you bought.</div><div id="list">'+shopList()+'</div>'}
 function shopList(){
  var L=VW.shopping.filter(function(s){return !S.onlyBuy||num(s.toBuy)>0});
- /* Compact brand > product > variant/progress hierarchy for mobile. */
  var brands={};
  L.forEach(function(s){
-  var raw=String(s.product||'').trim(),bits=raw.split(/\s+/),brand=bits.length>1?bits[0]:((s.store||'Other').trim()||'Other');
+  var raw=String(s.product||'').trim(),bits=raw.split(/\s+/);
+  var brand=String(s.brand||'').trim() || (bits.length>1?bits[0]:((s.store||'Other').trim()||'Other'));
   (brands[brand]=brands[brand]||[]).push(s);
  });
  return Object.keys(brands).sort().map(function(brand){
   var items=brands[brand],brandToBuy=items.reduce(function(a,s){return a+(num(s.toBuy)||0)},0),models={};
   items.forEach(function(s){var model=String(s.product||'').trim();(models[model]=models[model]||[]).push(s)});
-  var html='<div class="shop-brand"><div class="shop-brand-head"><span>'+esc(brand)+'</span><b class="'+(brandToBuy>0?'t-buy':'t-done')+'">'+(brandToBuy>0?brandToBuy+' to buy':'Done')+'</b></div>';
+  var html='<section class="shop-brand"><div class="shop-brand-head"><span>'+esc(brand)+'</span><b class="'+(brandToBuy>0?'t-buy':'t-done')+'">'+(brandToBuy>0?brandToBuy+' to buy':'Done')+'</b></div>';
   Object.keys(models).sort().forEach(function(model){
    var variants=models[model],modelToBuy=variants.reduce(function(a,s){return a+(num(s.toBuy)||0)},0);
    html+='<div class="shop-model"><div class="shop-model-head"><span>'+esc(model)+'</span><b class="'+(modelToBuy>0?'t-buy':'t-done')+'">'+(modelToBuy>0?modelToBuy+' to buy':'Done')+'</b></div>';
    variants.forEach(function(s){
     var out=s.soldOut==='Sold Out',tb=num(s.toBuy)||0,st=out?'out':tb>0?'buy':'done';
-    var detail='Bought '+(num(s.bought)||0)+' of '+(num(s.need)||0);
-    if(s.variant)detail=esc(s.variant)+' | '+detail;
-    else if(s.color)detail=esc(s.color)+' | '+detail;
-    if(s.paidYen!==''&&s.paidYen!=null)detail+=' · Paid '+yen(s.paidYen);
-    if(num(s.waiting)>0)detail+=' · '+s.waiting+' waiting for payment';
-    html+='<button class="shop-variant s-'+st+'" data-act="logBuy" data-name="'+esc(s.product)+'"><span class="shop-variant-detail">'+detail+'</span><span class="shop-variant-status t-'+st+'">'+(out?'Sold out':tb>0?tb+' to buy':'Done')+'</span></button>';
+    var variant=String(s.variant||s.color||s.size||'').trim();
+    var detail=(variant?esc(variant)+' <span class="shop-sep">|</span> ':'')+'Bought '+(num(s.bought)||0)+' of '+(num(s.need)||0);
+    if(s.paidYen!==''&&s.paidYen!=null)detail+=' <span class="shop-sep">·</span> Paid '+yen(s.paidYen);
+    if(num(s.waiting)>0)detail+=' <span class="shop-sep">·</span> '+s.waiting+' waiting for payment';
+    html+='<button type="button" class="shop-variant s-'+st+'" data-act="logBuy" data-name="'+esc(s.product)+'"><span class="shop-variant-detail">'+detail+'</span><span class="shop-variant-status t-'+st+'">'+(out?'Sold out':tb>0?tb+' to buy':'Done')+'</span></button>';
    });
    html+='</div>';
   });
-  return html+'</div>';
+  return html+'</section>';
  }).join('')||'<div class="k">Nothing to show</div>';
 }
 function payments(){

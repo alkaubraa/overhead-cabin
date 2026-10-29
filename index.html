@@ -218,7 +218,7 @@ function orderList(){
   return '<div class="card'+(o.cancel==='Yes'?' muted':'')+'"><div class="row"><b>'+esc(o.customer)+'</b><b>'+rp(o.gross)+'</b></div>'
   +'<div>'+esc(o.product)+' x'+esc(o.qty)+chip(o.status)+'</div>'
   +'<div class="row"><div class="sub">'+esc(o.date||'')+(o.note?' | '+esc(o.note):'')+' | bought '+val(o.bought)+', to buy '+val(o.toBuy)+'</div>'
-  +(o.row&&o.cancel!=='Yes'?'<button class="btn ghost sm" data-act="editOrder" data-row="'+o.row+'">Edit</button>':'')+'</div></div>'}).join('')||'<div class="k">Nothing found</div>';
+  +(o.row?'<button class="btn ghost sm" data-act="editOrder" data-row="'+o.row+'">Edit</button>':'')+'</div></div>'}).join('')||'<div class="k">Nothing found</div>';
 }
 function shopping(){return '<label class="tgl"><input type="checkbox" id="onlyBuy"'+(S.onlyBuy?' checked':'')+'> Only products still to buy</label><div class="sub" style="margin:0 2px 8px">Tap a product to log what you bought.</div><div id="list">'+shopList()+'</div>'}
 function shopList(){

@@ -66,6 +66,12 @@ input[readonly]{opacity:.6}
 .chips .chip{padding:3px 10px;font-size:12px}
 .step{display:flex;gap:8px;align-items:center}.step input{margin:4px 0 8px}.step .btn{margin-bottom:4px;padding:10px 16px}
 a{color:var(--acc)}
+.invoice-paper{background:#fff;color:#16202e;border:1px solid #e3e6ea;border-radius:12px;padding:18px;margin:10px 0;font-family:Garet,Arial,sans-serif}
+.invoice-brand{font-family:"Space Mono",monospace;font-weight:700;letter-spacing:.04em;font-size:20px;line-height:1.15}
+.invoice-brand small{display:block;font-size:10px;letter-spacing:.18em;font-weight:400;margin-top:5px}
+.invoice-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px}.invoice-table th,.invoice-table td{border-bottom:1px solid #e3e6ea;padding:8px 4px;text-align:left}.invoice-table th:last-child,.invoice-table td:last-child{text-align:right}
+@media print{body *{visibility:hidden}.invoice-paper,.invoice-paper *{visibility:visible}.invoice-paper{position:absolute;left:0;top:0;width:100%;margin:0;border:0}}
+
 </style>
 </head>
 <body>
@@ -85,7 +91,7 @@ var val=function(v){return v===''||v==null?'-':esc(v)};
 var today=function(){return new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10)};
 var ls={get:function(k){try{return localStorage.getItem(k)}catch(e){return null}},set:function(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 
-var S={tab:'home',q:'',onlyBuy:false,open:{},msg:'',loading:false,setup:false};
+var S={tab:'home',q:'',onlyBuy:false,open:{},msg:'',loading:false,setup:false,invoiceCustomer:''};
 var cfg={url:ls.get('oc_url')||'',key:ls.get('oc_key')||''};
 var D=null,AT=ls.get('oc_at'),Q=[],VW=null,form=null;
 try{D=JSON.parse(ls.get('oc_data')||'null')}catch(e){D=null}
@@ -234,11 +240,25 @@ function payments(){
 function payList(){
  var q=S.q.toLowerCase();
  return VW.payments.slice().reverse().filter(function(p){return !q||has(p.customer,q)}).map(function(p){
-  return '<div class="card"><div class="row"><b>'+esc(p.customer)+pend(p)+'</b><b>'+rp(p.amount)+'</b></div><div class="sub">'+esc(p.date||'')+(p.shipOnly==='Yes'?' | shipping only':'')+(p.note?' | '+esc(p.note):'')+'</div></div>'}).join('')||'<div class="k">Nothing found</div>';
+  return '<div class="card"><div class="row"><b>'+esc(p.customer)+pend(p)+'</b><b>'+rp(p.amount)+'</b></div><div class="sub">'+esc(p.date||'')+(p.shipOnly==='Yes'?' | shipping only':'')+(p.note?' | '+esc(p.note):'')+'</div><div class="btns"><button class="btn ghost sm" data-act="editPayment" data-row="'+p.row+'">Edit</button><button class="btn warn sm" data-act="deletePayment" data-row="'+p.row+'">Delete</button></div></div>'}).join('')||'<div class="k">Nothing found</div>';
 }
+function invoice(){
+ var opts=VW.customers.map(function(c){return {v:c.name,l:c.name}}),chosen=S.invoiceCustomer|| (VW.customers[0]?VW.customers[0].name:'');
+ return '<div class="card"><div class="k">Choose customer</div><select id="invoiceCustomer">'+opts.map(function(o){return '<option value="'+esc(o.v)+'"'+(o.v===chosen?' selected':'')+'>'+esc(o.l)+'</option>'}).join('')+'</select><div class="btns"><button class="btn" data-act="printInvoice">Print / Save PDF</button><button class="btn ghost" data-act="copyInvoice">Copy message</button></div></div>'+invoiceContent(chosen);
+}
+function invoiceContent(name){
+ var c=by(VW.customers,'name',name);if(!c)return '<div class="card">Choose a customer to view invoice.</div>';
+ var orders=VW.orders.filter(function(o){return o.customer===c.name&&o.cancel!=='Yes'}),pays=VW.payments.filter(function(p){return p.customer===c.name});
+ var itemTotal=orders.reduce(function(a,o){return a+(num(o.billable)!=null?num(o.billable):(num(o.gross)||0))},0),paid=pays.reduce(function(a,p){return a+(num(p.amount)||0)},0),ship=num(c.shipFee)||0;
+ var total=itemTotal+ship,bal=total-paid;
+ var rows=orders.map(function(o){return '<tr><td>'+esc(o.product)+'</td><td>'+esc(o.qty)+'</td><td>'+rp(o.billable!=null&&o.billable!==''?o.billable:o.gross)+'</td></tr>'}).join('');
+ var payrows=pays.map(function(p){return '<tr><td>'+esc(p.date||'')+(p.shipOnly==='Yes'?' · Shipping':' · Payment')+'</td><td>'+esc(p.note||'')+'</td><td>'+rp(p.amount)+'</td></tr>'}).join('');
+ return '<div id="invoicePaper" class="invoice-paper"><div class="invoice-brand">OVERHEAD CABIN<small>PERSONAL SHOPPING SERVICE</small></div><hr style="border:0;border-top:1px solid #e3e6ea;margin:16px 0"><div style="display:flex;justify-content:space-between;gap:12px"><div><b>INVOICE / ORDER RECAP</b><div style="font-size:13px;margin-top:6px">Customer: '+esc(c.name)+'</div><div style="font-size:13px">Contact: '+esc(c.contact||'-')+'</div></div><div style="text-align:right;font-size:12px">Generated<br>'+esc(today())+'</div></div><table class="invoice-table"><thead><tr><th>Item</th><th>Qty</th><th>Amount</th></tr></thead><tbody>'+(rows||'<tr><td colspan="3">No active order items</td></tr>')+'</tbody></table><div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span>Items total</span><b>'+rp(itemTotal)+'</b></div><div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span>Shipping fee</span><b>'+rp(ship)+'</b></div><div style="display:flex;justify-content:space-between;border-top:1px solid #26323f;margin-top:8px;padding:10px 0;font-size:15px"><b>Total</b><b>'+rp(total)+'</b></div><div style="font-size:13px;margin:6px 0">Payments received: <b>'+rp(paid)+'</b></div><div style="font-size:15px;margin:6px 0">Balance: <b>'+rp(bal)+'</b></div>'+(payrows?'<h4 style="font-size:12px;margin:18px 0 4px">PAYMENT HISTORY</h4><table class="invoice-table"><tbody>'+payrows+'</tbody></table>':'')+'<div style="font-size:10px;color:#6b7685;margin-top:20px">Thank you for shopping with Overhead Cabin.</div></div>';
+}
+function invoiceMessage(name){var c=by(VW.customers,'name',name);if(!c)return '';var os=VW.orders.filter(function(o){return o.customer===c.name&&o.cancel!=='Yes'}),ps=VW.payments.filter(function(p){return p.customer===c.name});var item=os.reduce(function(a,o){return a+(num(o.billable)!=null?num(o.billable):(num(o.gross)||0))},0),ship=num(c.shipFee)||0,paid=ps.reduce(function(a,p){return a+(num(p.amount)||0)},0),total=item+ship;return 'Hi '+c.name+'! Here is your Overhead Cabin order recap.\n\n'+os.map(function(o){return '• '+o.product+' × '+o.qty+' — '+rp(o.billable!=null&&o.billable!==''?o.billable:o.gross)}).join('\n')+'\n\nItems: '+rp(item)+'\nShipping: '+rp(ship)+'\nTotal: '+rp(total)+'\nPayment received: '+rp(paid)+'\nBalance: '+rp(total-paid)+'\n\nThank you! — Overhead Cabin';}
 var LISTS={catalog:catalogList,customers:customerList,orders:orderList,shopping:shopList,payments:payList};
-var VIEWS={home:home,catalog:catalog,customers:customers,orders:orders,shopping:shopping,payments:payments};
-var TITLES={home:'Home',catalog:'Catalog',customers:'Customers',orders:'Orders',shopping:'Shopping',payments:'Payments'};
+var VIEWS={home:home,catalog:catalog,customers:customers,orders:orders,shopping:shopping,payments:payments,invoice:invoice};
+var TITLES={home:'Home',catalog:'Catalog',customers:'Customers',orders:'Orders',shopping:'Shopping',payments:'Payments',invoice:'Invoice'};
 var ADD={catalog:'newProduct',customers:'newCustomer',orders:'newOrder',payments:'newPayment'};
 
 function setupView(){
@@ -331,6 +351,10 @@ function savePayment(){
  if(!(amt>0)){alert('Enter an amount above 0');return}
  enqueue('addPayment',{customer:c.name,amount:amt,date:val$('f_date')||today(),shipOnly:$('#f_ship').checked,note:val$('f_note')},'Payment: '+c.name+' '+rp(amt));afterSave();
 }
+function paymentByRow(row){var p=null;VW.payments.forEach(function(x){if(Number(x.row)===Number(row))p=x});return p}
+function openPaymentEdit(row){var p=paymentByRow(row);if(!p)return;showOv(head('Edit payment')+inp('Customer','f_cust','text',p.customer,'readonly')+inp('Amount (Rp)','f_amt','number',p.amount,'inputmode="numeric"')+inp('Date','f_date','date',p.date||today())+'<label class="tgl"><input type="checkbox" id="f_ship"'+(p.shipOnly==='Yes'?' checked':'')+'> Shipping fee only</label>'+inp('Note (optional)','f_note','text',p.note||'')+'<button class="btn" data-act="savePaymentEdit" data-row="'+row+'" style="width:100%">Save changes</button>')}
+function savePaymentEdit(row){var p=paymentByRow(row),amt=Number(val$('f_amt'));if(!p)return;if(!(amt>0)){alert('Enter an amount above 0');return}enqueue('updatePayment',{row:row,expectCustomer:p.customer,expectAmount:p.amount,customer:p.customer,amount:amt,date:val$('f_date')||today(),shipOnly:$('#f_ship').checked,note:val$('f_note')},'Edit payment: '+p.customer+' '+rp(amt));afterSave()}
+function deletePayment(row){var p=paymentByRow(row);if(!p)return;if(!confirm('Delete this payment of '+rp(p.amount)+' from '+p.customer+'?'))return;enqueue('deletePayment',{row:row,expectCustomer:p.customer,expectAmount:p.amount},'Delete payment: '+p.customer+' '+rp(p.amount));afterSave()}
 function openProduct(name){
  var p=name?by(VW.products,'name',name):null,s=VW.settings;
  showOv(head(p?'Edit product':'New product')+inp('Name','f_name','text',p?p.name:'',p?'readonly':'autocapitalize="words"')
@@ -417,6 +441,11 @@ document.addEventListener('click',function(e){
  else if(a==='saveOrder')saveOrder();
  else if(a==='newPayment'){openPayment(n?{customer:n}:null)}
  else if(a==='savePayment')savePayment();
+ else if(a==='editPayment')openPaymentEdit(r);
+ else if(a==='savePaymentEdit')savePaymentEdit(r);
+ else if(a==='deletePayment')deletePayment(r);
+ else if(a==='printInvoice'){var ip=$('#invoicePaper');if(ip)window.print()}
+ else if(a==='copyInvoice'){var im=invoiceMessage(S.invoiceCustomer||($('#invoiceCustomer')?$('#invoiceCustomer').value:''));if(im&&navigator.clipboard)navigator.clipboard.writeText(im).then(function(){alert('Invoice recap copied.')},function(){prompt('Copy this message:',im)});else prompt('Copy this message:',im)}
  else if(a==='newProduct')openProduct();
  else if(a==='editProduct')openProduct(n);
  else if(a==='saveProduct')saveProduct(!!t.dataset.edit);
@@ -441,6 +470,7 @@ document.addEventListener('input',function(e){
 });
 document.addEventListener('change',function(e){
  if(e.target.id==='onlyBuy'){S.onlyBuy=e.target.checked;$('#list').innerHTML=shopList()}
+ else if(e.target.id==='invoiceCustomer'){S.invoiceCustomer=e.target.value;render()}
  else if(e.target.id==='c3'){calcUpdate()}
 });
 window.addEventListener('online',function(){if(cfg.url&&cfg.key)sync()});

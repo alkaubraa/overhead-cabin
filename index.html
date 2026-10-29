@@ -292,7 +292,7 @@ function shopList(){
     var detail=(variant?esc(variant)+' <span class="shop-sep">|</span> ':'')+'Bought '+(num(s.bought)||0)+' of '+(num(s.need)||0);
     if(s.paidYen!==''&&s.paidYen!=null)detail+=' <span class="shop-sep">·</span> Paid '+yen(s.paidYen);
     if(num(s.waiting)>0)detail+=' <span class="shop-sep">·</span> '+s.waiting+' waiting for payment';
-    html+='<button type="button" class="shop-variant s-'+st+'" data-act="logBuy" data-name="'+esc(s.product)+'"><span class="shop-variant-detail">'+detail+'</span><span class="shop-variant-status t-'+st+'">'+(out?'Sold out':tb>0?tb+' to buy':'Done')+'</span></button>';
+    html+='<button type="button" class="shop-variant s-'+st+'" data-act="logBuy" data-row="'+s.row+'"><span class="shop-variant-detail">'+detail+'</span><span class="shop-variant-status t-'+st+'">'+(out?'Sold out':tb>0?tb+' to buy':'Done')+'</span></button>';
    });
    html+='</div>';
   });
@@ -568,17 +568,18 @@ function saveCustomer(edit){
  var d={name:name,type:val$('f_type'),contact:val$('f_contact'),address:val$('f_addr'),courier:val$('f_cour'),shipFee:numOrBlank('f_fee'),status:val$('f_status'),notes:val$('f_notes')};
  enqueue(edit?'updateCustomer':'addCustomer',d,(edit?'Edit customer: ':'New customer: ')+name);afterSave();
 }
-function openBuy(name){
- var s=by(VW.shopping,'product',name);if(!s)return;
- showOv(head('Log purchase')+'<div style="margin-bottom:8px"><b>'+esc(s.product)+'</b><div class="sub">'+esc(s.store)+' | need now '+val(s.need)+' | waiting payment '+val(s.waiting)+'</div></div>'
+function openBuy(row){
+ var s=null;VW.shopping.forEach(function(x){if(Number(x.row)===Number(row))s=x});if(!s)return;
+ showOv(head('Log purchase')+'<div style="margin-bottom:8px"><b>'+esc(s.product)+'</b><div class="sub">'+esc(s.variant||'standard')+' | '+esc(s.store)+' | need now '+val(s.need)+' | waiting payment '+val(s.waiting)+'</div></div>'
   +'<label class="k">Bought so far (total)</label><div class="step"><button class="btn ghost" data-act="dec">-</button>'+'<input id="f_b" type="number" inputmode="numeric" value="'+esc(s.bought)+'"><button class="btn ghost" data-act="inc">+</button></div>'
   +inp('Paid so far in yen (total)','f_p','number',s.paidYen,'inputmode="decimal"')
   +'<label class="tgl"><input type="checkbox" id="f_out"'+(s.soldOut==='Sold Out'?' checked':'')+'> Can\'t get more (sold out)</label>'
-  +'<button class="btn" data-act="saveBuy" data-name="'+esc(s.product)+'" style="width:100%">Save</button>');
+  +'<button class="btn" data-act="saveBuy" data-row="'+s.row+'" style="width:100%">Save</button>');
 }
-function saveBuy(name){
+function saveBuy(row){
+ var s=null;VW.shopping.forEach(function(x){if(Number(x.row)===Number(row))s=x});if(!s)return;
  var b=numOrBlank('f_b'),p=numOrBlank('f_p');
- enqueue('upsertPurchase',{product:name,bought:b,paidYen:p,soldOut:$('#f_out').checked},'Bought: '+name+' '+(b===''?'-':b));afterSave();
+ enqueue('upsertPurchase',{product:s.product,variant:s.variant||'standard',bought:b,paidYen:p,soldOut:$('#f_out').checked},'Bought: '+s.product+' / '+(s.variant||'standard')+' '+(b===''?'-':b));afterSave();
 }
 function openOrderEdit(row){
  var o=null;VW.orders.forEach(function(x){if(x.row===row)o=x});if(!o)return;
@@ -639,8 +640,8 @@ document.addEventListener('click',function(e){
  else if(a==='newCustomer')openCustomer();
  else if(a==='editCustomer')openCustomer(n);
  else if(a==='saveCustomer')saveCustomer(!!t.dataset.edit);
- else if(a==='logBuy')openBuy(n);
- else if(a==='saveBuy')saveBuy(n);
+ else if(a==='logBuy')openBuy(Number(el.dataset.row));
+ else if(a==='saveBuy')saveBuy(Number(el.dataset.row));
  else if(a==='inc'||a==='dec'){var f=$('#f_b'),c=Number(f.value)||0;f.value=Math.max(0,c+(a==='inc'?1:-1))}
  else if(a==='editOrder')openOrderEdit(r);
  else if(a==='saveOrderEdit')saveOrderEdit(r);

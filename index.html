@@ -218,7 +218,7 @@ function orderList(){
   return '<div class="card'+(o.cancel==='Yes'?' muted':'')+'"><div class="row"><b>'+esc(o.customer)+'</b><b>'+rp(o.gross)+'</b></div>'
   +'<div>'+esc(o.product)+' x'+esc(o.qty)+chip(o.status)+'</div>'
   +'<div class="row"><div class="sub">'+esc(o.date||'')+(o.note?' | '+esc(o.note):'')+' | bought '+val(o.bought)+', to buy '+val(o.toBuy)+'</div>'
-  +(o.row?'<button class="btn ghost sm" data-act="editOrder" data-row="'+o.row+'">Edit</button>':'')+'</div></div>'}).join('')||'<div class="k">Nothing found</div>';
+  +(o.row?'<button class="btn ghost sm" data-act="editOrder" data-row="'+o.row+'">Edit</button>'+(o.cancel==='Yes'?'<button class="btn ghost sm" data-act="reactivateOrder" data-row="'+o.row+'">Reactivate</button>':''):'')+'</div></div>'}).join('')||'<div class="k">Nothing found</div>';
 }
 function shopping(){return '<label class="tgl"><input type="checkbox" id="onlyBuy"'+(S.onlyBuy?' checked':'')+'> Only products still to buy</label><div class="sub" style="margin:0 2px 8px">Tap a product to log what you bought.</div><div id="list">'+shopList()+'</div>'}
 function shopList(){
@@ -529,6 +529,11 @@ function cancelLine(row){
  var o=orderByRow(row);if(!o)return;if(!confirm('Cancel this order line for '+o.customer+'?'))return;
  enqueue('cancelOrder',{row:row,expectCustomer:o.customer,expectProduct:o.product},'Cancel order: '+o.customer+', '+o.product);afterSave();
 }
+function reactivateOrder(row){
+ var o=orderByRow(row);if(!o||o.cancel!=='Yes')return;
+ if(!confirm('Reactivate this order line for '+o.customer+'?'))return;
+ enqueue('reactivateOrder',{row:row,expectCustomer:o.customer,expectProduct:o.product},'Reactivate order: '+o.customer+', '+o.product);afterSave();
+}
 function openPending(){
  showOv(head('Pending on this phone')+(Q.length?Q.map(function(it,i){return '<div class="card"><div>'+esc(it.label||it.action)+'</div>'
   +(it.err?'<div class="err">'+esc(it.err)+'</div>':'<div class="sub">Waiting to sync</div>')+'<div class="btns"><button class="btn ghost sm" data-act="discard" data-i="'+i+'">Discard</button></div></div>'}).join('')
@@ -573,6 +578,7 @@ document.addEventListener('click',function(e){
  else if(a==='editOrder')openOrderEdit(r);
  else if(a==='saveOrderEdit')saveOrderEdit(r);
  else if(a==='cancelLine')cancelLine(r);
+ else if(a==='reactivateOrder')reactivateOrder(r);
  else if(a==='pend')openPending();
  else if(a==='discard'){Q.splice(Number(t.dataset.i),1);saveQ();recalc();render();openPending()}
  else if(a==='retry'){closeOv();sync(true)}

@@ -18,17 +18,22 @@
 html,body{margin:0;height:100%}
 body{background:var(--bg);color:var(--ink);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding-top:env(safe-area-inset-top)}
 #app{display:flex;flex-direction:column;height:100%}
-header{padding:10px 14px 8px;display:flex;align-items:center;gap:10px;background:var(--bg)}
-header h1{font-size:18px;margin:0;flex:1}
+header{padding:10px 14px 8px;display:flex;align-items:center;gap:8px}
+header h1{font-size:18px;margin:0;flex:1;min-width:0}
 header small{display:block;color:var(--mute);font-size:11px;font-weight:400}
 button{font:inherit;color:inherit}
-.btn{background:var(--acc);color:var(--accink);border:0;border-radius:10px;padding:8px 14px;font-weight:600}
+.btn{background:var(--acc);color:var(--accink);border:0;border-radius:10px;padding:8px 12px;font-weight:600}
 .btn.ghost{background:var(--chip);color:var(--ink)}
-main{flex:1;overflow-y:auto;padding:4px 14px 90px;-webkit-overflow-scrolling:touch}
+.btn.warn{background:var(--warn);color:#fff}
+.btn.sm{padding:5px 10px;font-size:13px}
+.btns{display:flex;gap:8px;margin-top:8px}.btns .btn{flex:1}
+main{flex:1;overflow-y:auto;padding:4px 14px 130px;-webkit-overflow-scrolling:touch}
 nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
 nav button{flex:1;background:none;border:0;padding:12px 2px;font-size:11px;color:var(--mute)}
 nav button.on{color:var(--acc);font-weight:700}
+.fab{position:fixed;right:16px;bottom:calc(66px + env(safe-area-inset-bottom));width:52px;height:52px;border-radius:26px;border:0;background:var(--acc);color:var(--accink);font-size:28px;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.3)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin:0 0 10px}
+.card.s-buy{border-left:4px solid var(--warn)}.card.s-done{border-left:4px solid var(--good)}.card.s-out{border-left:4px solid var(--bad)}
 .row{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
 .grid .card{margin:0}
@@ -36,27 +41,32 @@ nav button.on{color:var(--acc);font-weight:700}
 .v{font-size:20px;font-weight:700}
 .sec{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);margin:14px 2px 6px}
 .chip{display:inline-block;background:var(--chip);border-radius:20px;padding:1px 9px;font-size:11px;font-weight:600;margin-left:6px;white-space:nowrap}
-.chip.good{color:var(--good)}.chip.warn{color:var(--warn)}.chip.bad{color:var(--bad)}.chip.info{color:var(--info)}
-input,select{width:100%;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;margin:4px 0 8px}
+.chip.good,.t-done{color:var(--good)}.chip.warn,.t-buy{color:var(--warn)}.chip.bad,.t-out{color:var(--bad)}.chip.info{color:var(--info)}
+input,select,textarea{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;margin:4px 0 8px}
+input[type=checkbox]{width:auto;margin:0}
+input[readonly]{opacity:.6}
 .bar{height:8px;border-radius:6px;background:var(--chip);overflow:hidden;margin-top:6px}
 .bar i{display:block;height:100%;background:var(--acc)}
 .item{cursor:pointer}
-.item .sub{color:var(--mute);font-size:12px}
+.sub{color:var(--mute);font-size:12px}
 .det{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:13px}
 .det div{display:flex;justify-content:space-between;gap:10px;padding:2px 0}
 .det div span:first-child{color:var(--mute)}
 .det div span:last-child{text-align:right;word-break:break-word}
 .muted{opacity:.55}
 .toast{color:var(--mute);font-size:12px;padding:0 2px 8px}
+.hint{color:var(--info);font-size:12px;margin:-4px 0 8px;min-height:0}
+.err{color:var(--bad);font-size:12px}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;z-index:5}
-.sheet{background:var(--bg);width:100%;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));max-height:90%;overflow:auto}
+.sheet{background:var(--bg);width:100%;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));max-height:92%;overflow:auto}
 .tgl{display:flex;align-items:center;gap:8px;margin:0 2px 10px;color:var(--mute);font-size:13px}
-.tgl input{width:auto;margin:0}
+.step{display:flex;gap:8px;align-items:center}.step input{margin:4px 0 8px}.step .btn{margin-bottom:4px;padding:10px 16px}
 a{color:var(--acc)}
 </style>
 </head>
 <body>
 <div id="app"></div>
+<div id="ov"></div>
 <script>
 (function(){
 'use strict';
@@ -68,45 +78,93 @@ var rp=function(v){var n=num(v);return bad(n)?'-':'Rp '+Math.round(n).toLocaleSt
 var yen=function(v){var n=num(v);return bad(n)?'-':'\u00a5'+n.toLocaleString('en-US')};
 var pct=function(v){var n=num(v);return bad(n)?'-':Math.round(n*100)+'%'};
 var val=function(v){return v===''||v==null?'-':esc(v)};
-var ls={get:function(k){try{return localStorage.getItem(k)}catch(e){return null}},set:function(k,v){try{localStorage.setItem(k,v)}catch(e){}},del:function(k){try{localStorage.removeItem(k)}catch(e){}}};
+var today=function(){return new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10)};
+var ls={get:function(k){try{return localStorage.getItem(k)}catch(e){return null}},set:function(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 
-var S={tab:'home',q:'',onlyBuy:false,open:{},calc:false,msg:'',loading:false,setup:false};
+var S={tab:'home',q:'',onlyBuy:false,open:{},msg:'',loading:false,setup:false};
 var cfg={url:ls.get('oc_url')||'',key:ls.get('oc_key')||''};
-var D=null,AT=ls.get('oc_at');
+var D=null,AT=ls.get('oc_at'),Q=[],VW=null,form=null;
 try{D=JSON.parse(ls.get('oc_data')||'null')}catch(e){D=null}
+try{Q=JSON.parse(ls.get('oc_queue')||'[]')}catch(e){Q=[]}
+var saveQ=function(){ls.set('oc_queue',JSON.stringify(Q))};
 
+/* ---------- helpers on data ---------- */
+function lc(s){return String(s==null?'':s).trim().toLowerCase()}
+function by(arr,key,name){var n=lc(name);if(!n)return null;for(var i=0;i<arr.length;i++)if(lc(arr[i][key])===n)return arr[i];return null}
+function selling(s,yenP,sur,manual){var m=num(manual);if(m>0)return m;var y=num(yenP);if(!(y>0))return '';
+ var base=y<=num(s.threshold)?y*num(s.t1Rate)+num(s.t1Fee):y*num(s.t2Rate);return base+(num(sur)||0)}
+function applyQueue(d,q){
+ var v=JSON.parse(JSON.stringify(d)),s=v.settings;
+ q.forEach(function(it){var x=it.data,c,p,o,sh;
+  if(it.action==='addCustomer'){if(!by(v.customers,'name',x.name))v.customers.push({name:x.name,type:x.type||'New',contact:x.contact||'',address:x.address||'',courier:x.courier||'',units:0,bought:0,waiting:0,toBuy:0,billable:0,itemsPaid:0,shipFee:x.shipFee||'',shipPaid:0,balance:0,payStatus:'No order',status:x.status||'Shopping',next:'No items yet',notes:x.notes||'',pending:true})}
+  else if(it.action==='updateCustomer'){c=by(v.customers,'name',x.name);if(c){['type','contact','address','courier','shipFee','status','notes'].forEach(function(k){if(k in x)c[k]=x[k]});c.pending=true}}
+  else if(it.action==='addProduct'){if(!by(v.products,'name',x.name))v.products.push({name:x.name,store:x.store||'',yen:x.yen,surcharge:x.surcharge,manualIdr:x.manualIdr,link:x.link||'',ig:x.ig||'Not posted',notes:x.notes||'',selling:selling(s,x.yen,x.surcharge,x.manualIdr),ordered:0,pending:true})}
+  else if(it.action==='updateProduct'){p=by(v.products,'name',x.name);if(p){['store','yen','surcharge','manualIdr','link','ig','notes'].forEach(function(k){if(k in x)p[k]=x[k]});p.selling=selling(s,p.yen,p.surcharge,p.manualIdr);p.pending=true}}
+  else if(it.action==='addStore'){if(s.stores.map(lc).indexOf(lc(x.name))<0)s.stores.push(x.name)}
+  else if(it.action==='addOrder'){p=by(v.products,'name',x.product);var u=p?p.selling:selling(s,x.yen,x.surcharge,'');
+   v.orders.push({customer:x.customer,product:x.product,qty:x.qty,note:x.note||'',date:x.date,cancel:'',unit:u,gross:u===''?'':u*x.qty,bought:'',toBuy:'',waiting:'',status:'Pending',pending:true})}
+  else if(it.action==='updateOrder'||it.action==='cancelOrder'){o=null;v.orders.forEach(function(r){if(r.row===x.row)o=r});
+   if(o){if(it.action==='cancelOrder'){o.cancel='Yes';o.status='Cancelled'}else{if('qty' in x){o.qty=x.qty;if(o.unit!=='')o.gross=o.unit*x.qty}if('note' in x)o.note=x.note}o.pending=true}}
+  else if(it.action==='addPayment'){v.payments.push({customer:x.customer,amount:x.amount,date:x.date,shipOnly:x.shipOnly?'Yes':'',note:x.note||'',pending:true});
+   c=by(v.customers,'name',x.customer);if(c&&num(c.balance)!=null)c.balance=num(c.balance)-x.amount}
+  else if(it.action==='upsertPurchase'){sh=by(v.shopping,'product',x.product);if(sh){sh.bought=x.bought;sh.paidYen=x.paidYen;sh.soldOut=x.soldOut?'Sold Out':'';
+   sh.toBuy=Math.max(0,(num(sh.need)||0)-(num(x.bought)||0));sh.pending=true}}
+ });
+ return v;
+}
+function recalc(){VW=D?applyQueue(D,Q):null}
+recalc();
 function chip(t,kind){if(t===''||t==null)return '';if(!kind){var s=String(t).toLowerCase();
- kind=/^(paid|bought|done|delivered|shipped|trusted)/.test(s)?'good':/(unpaid|collect|buy |need|waiting|partial)/.test(s)?'warn':/(sold out|cancel)/.test(s)?'bad':/(overpaid|refund|new)/.test(s)?'info':''}
+ kind=/payment required/.test(s)?'bad':/(collect|unpaid|keep shopping|waiting|partial|pending)/.test(s)?'warn':/(overpaid|refund|new)/.test(s)?'info':/(sold out|cancel)/.test(s)?'bad':/^(paid|bought|done|delivered|shipped|trusted|ready)/.test(s)?'good':''}
  return '<span class="chip '+kind+'">'+esc(t)+'</span>'}
 function has(s,q){return String(s==null?'':s).toLowerCase().indexOf(q)>-1}
 function det(pairs){return '<div class="det">'+pairs.map(function(p){return '<div><span>'+esc(p[0])+'</span><span>'+p[1]+'</span></div>'}).join('')+'</div>'}
 function when(){if(!AT)return 'Never synced';var d=new Date(AT);return 'Synced '+d.toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}
+function cid(){return 'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
+function enqueue(action,data,label){Q.push({cid:cid(),action:action,data:data,label:label,at:Date.now()});saveQ();recalc()}
 
-function sync(){
+/* ---------- sync ---------- */
+function acceptData(d){D=d;AT=new Date().toISOString();ls.set('oc_data',JSON.stringify(D));ls.set('oc_at',AT);recalc()}
+function sync(retry){
  if(!cfg.url||!cfg.key){S.setup=true;render();return Promise.resolve()}
+ if(S.loading)return Promise.resolve();
+ if(retry)Q.forEach(function(it){delete it.err});
+ var sending=Q.filter(function(it){return !it.err});
  S.loading=true;S.msg='';render();
- var ctl=new AbortController();var t=setTimeout(function(){ctl.abort()},25000);
- return fetch(cfg.url+'?action=snapshot&key='+encodeURIComponent(cfg.key),{signal:ctl.signal})
- .then(function(r){return r.json()})
- .then(function(j){clearTimeout(t);if(!j.ok)throw new Error(j.error||'Unknown error');D=j.data;AT=new Date().toISOString();ls.set('oc_data',JSON.stringify(D));ls.set('oc_at',AT);S.msg=''})
- .catch(function(e){clearTimeout(t);S.msg=(navigator.onLine?'Could not sync ('+e.message+'). ':'Offline. ')+'Showing saved data.'})
- .then(function(){S.loading=false;render()});
+ var ctl=new AbortController(),t=setTimeout(function(){ctl.abort()},60000),p;
+ if(sending.length){
+  p=fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},signal:ctl.signal,
+   body:JSON.stringify({key:cfg.key,items:sending.map(function(it){return {cid:it.cid,action:it.action,data:it.data}})})})
+  .then(function(r){return r.json()}).then(function(j){
+   if(!j.ok)throw new Error(j.error||'Unknown error');
+   var res={};j.results.forEach(function(r){res[r.cid]=r});
+   Q=Q.filter(function(it){var r=res[it.cid];if(!r)return true;if(r.ok)return false;it.err=r.error;return true});
+   saveQ();acceptData(j.data);
+   var n=Q.filter(function(it){return it.err}).length;S.msg=n?n+' item(s) need attention. Tap Pending.':''});
+ }else{
+  p=fetch(cfg.url+'?action=snapshot&key='+encodeURIComponent(cfg.key),{signal:ctl.signal})
+  .then(function(r){return r.json()}).then(function(j){if(!j.ok)throw new Error(j.error||'Unknown error');acceptData(j.data);S.msg=''});
+ }
+ return p.catch(function(e){S.msg=(navigator.onLine?'Could not sync ('+e.message+'). ':'Offline. ')+(Q.length?'Your entries are saved on this phone.':'Showing saved data.')})
+ .then(function(){clearTimeout(t);S.loading=false;render();
+  if(Q.some(function(it){return !it.err&&sending.indexOf(it)<0})&&navigator.onLine)setTimeout(function(){sync()},200)});
 }
+function afterSave(){closeOv();render();if(navigator.onLine)sync()}
 
-/* ---------- views ---------- */
+/* ---------- main views ---------- */
 function stat(k,v){return '<div class="card"><div class="k">'+esc(k)+'</div><div class="v">'+v+'</div></div>'}
 function home(){
- var h=D.home,a=h.actions,u=h.units,m=h.money,p=h.people;
+ var d=VW,h=d.home,a=h.actions,u=h.units,m=h.money,p=h.people;
  var prog=Math.max(0,Math.min(100,Math.round((num(u.progress)||0)*100)));
  var checks=h.checks.filter(function(c){return c.label==='Overall'})[0];
- return '<div class="card"><div class="row"><div><b>'+val(D.settings.batch)+'</b><div class="k">Ship from '+val(D.settings.shipFrom)+'</div></div><div style="text-align:right"><b>'+val(h.daysText)+'</b><div class="k">Rate '+val(h.rate)+'</div></div></div>'
- +'<div style="margin-top:10px"><button class="btn" data-act="calc" style="width:100%">Price calculator</button></div></div>'
- +'<div class="sec">Today\'s actions</div><div class="grid">'
+ return '<div class="card"><div class="row"><div><b>'+val(d.settings.batch)+'</b><div class="k">Ship from '+val(d.settings.shipFrom)+'</div></div><div style="text-align:right"><b>'+val(h.daysText)+'</b><div class="k">Rate '+val(h.rate)+'</div></div></div>'
+ +'<div class="btns"><button class="btn" data-act="calc">Calculator</button><button class="btn" data-act="newOrder">+ Order</button><button class="btn" data-act="newPayment">+ Payment</button></div></div>'
+ +'<div class="sec">Current overview</div><div class="grid">'
  +stat('Collect payment',val(a.collect)+(num(a.onHold)?' <span class="k">('+esc(a.onHold)+' required to continue)</span>':''))
  +stat('Still waiting on items to shop',val(a.waitingItems))
- +stat('Ready to pack',val(a.readyToPack))
- +stat('Overpaid (refund)',val(a.overpaid))
- +'</div><div class="card"><div class="row"><span class="k">Shipping fees to collect</span><b>'+rp(a.shippingToCollect)+'</b></div></div>'
+ +stat('Customers ready to pack',val(a.readyToPack))
+ +stat('Overpaid: refund or apply to shipping',val(a.overpaid))
+ +'</div><div class="card"><div class="row"><span class="k">Shipping fees to collect</span><b>'+val(a.shippingToCollect)+'</b></div></div>'
  +'<div class="sec">Shopping progress</div><div class="card"><div class="row"><span>'+val(u.bought)+' bought of '+val(u.ordered)+' ordered</span><b>'+prog+'%</b></div><div class="bar"><i style="width:'+prog+'%"></i></div><div class="k" style="margin-top:6px">Still to buy: '+val(u.toBuy)+' units</div></div>'
  +'<div class="sec">Money</div><div class="card">'
  +'<div class="row"><span class="k">Billable items</span><b>'+rp(m.billable)+'</b></div>'
@@ -120,58 +178,63 @@ function home(){
  +(checks?'<div class="sec">Data check</div><div class="card"><b>'+val(checks.value)+'</b></div>':'');
 }
 function bar(ph){return '<input id="q" type="search" placeholder="'+esc(ph)+'" value="'+esc(S.q)+'" autocomplete="off">'}
+function pend(x){return x.pending?chip('Pending','info'):''}
 function catalog(){return bar('Search product or store')+'<div id="list">'+catalogList()+'</div>'}
 function catalogList(){
  var q=S.q.toLowerCase();
- var L=D.products.filter(function(p){return !q||has(p.name,q)||has(p.store,q)});
- return L.map(function(p,i){var id='p'+p.name;var o=S.open[id];
-  return '<div class="card item" data-open="'+esc(id)+'"><div class="row"><b>'+esc(p.name)+'</b><b>'+(p.selling!==''?rp(p.selling):'-')+'</b></div>'
-  +'<div class="sub">'+esc(p.store)+' | '+yen(p.yen)+(num(p.ordered)?' | ordered '+esc(p.ordered):'')+chip(p.ig==='Posted'?'Posted':'',p.ig==='Posted'?'good':'')+'</div>'
-  +(o?det([['Surcharge',rp(p.surcharge||0)],['Manual IDR price',p.manualIdr===''?'-':rp(p.manualIdr)],['IG label',val(p.label)],['Est. buying cost',rp(p.cost)],['Est. profit',rp(p.profit)+' ('+pct(p.margin)+')'],['IG status',val(p.ig)],['Notes',val(p.notes)],['Link',p.link?'<a href="'+esc(p.link)+'" target="_blank" rel="noopener">Open</a>':'-']]):'')+'</div>'}).join('')||'<div class="k">Nothing found</div>';
+ return VW.products.filter(function(p){return !q||has(p.name,q)||has(p.store,q)}).map(function(p){var id='p'+p.name,o=S.open[id];
+  return '<div class="card item" data-open="'+esc(id)+'"><div class="row"><b>'+esc(p.name)+pend(p)+'</b><b>'+(p.selling!==''?rp(p.selling):'-')+'</b></div>'
+  +'<div class="sub">'+esc(p.store)+' | '+yen(p.yen)+(num(p.ordered)?' | ordered '+esc(p.ordered):'')+(p.ig==='Posted'?' | posted':'')+'</div>'
+  +(o?det([['Surcharge',rp(p.surcharge||0)],['Manual IDR price',p.manualIdr===''?'-':rp(p.manualIdr)],['IG label',val(p.label)],['Est. buying cost',rp(p.cost)],['Est. profit',rp(p.profit)+' ('+pct(p.margin)+')'],['IG status',val(p.ig)],['Notes',val(p.notes)],['Link',p.link?'<a href="'+esc(p.link)+'" target="_blank" rel="noopener">Open</a>':'-']])
+   +'<div class="btns"><button class="btn ghost sm" data-act="editProduct" data-name="'+esc(p.name)+'">Edit</button><button class="btn ghost sm" data-act="newOrder" data-name="'+esc(p.name)+'" data-kind="product">Order this</button></div>':'')+'</div>'}).join('')||'<div class="k">Nothing found</div>';
 }
 function customers(){return bar('Search customer')+'<div id="list">'+customerList()+'</div>'}
 function customerList(){
  var q=S.q.toLowerCase();
- return D.customers.filter(function(c){return !q||has(c.name,q)}).map(function(c){var id='c'+c.name;var o=S.open[id];
-  var lines='',pays='';
-  if(o){lines=D.orders.filter(function(x){return x.customer===c.name}).map(function(x){return [esc(x.product)+' x'+esc(x.qty),chip(x.status)]});
-   pays=D.payments.filter(function(x){return x.customer===c.name}).map(function(x){return [esc(x.date),rp(x.amount)+(x.shipOnly==='Yes'?' (shipping)':'')]})}
-  return '<div class="card item" data-open="'+esc(id)+'"><div class="row"><b>'+esc(c.name)+chip(c.type)+'</b><b>'+rp(c.balance)+'</b></div>'
-  +'<div class="sub">'+esc(c.next||'')+' '+chip(c.status,'')+'</div>'
+ return VW.customers.filter(function(c){return !q||has(c.name,q)}).map(function(c){var id='c'+c.name,o=S.open[id],lines='',pays='';
+  if(o){lines=VW.orders.filter(function(x){return x.customer===c.name}).map(function(x){return [esc(x.product)+' x'+esc(x.qty),chip(x.status)]});
+   pays=VW.payments.filter(function(x){return x.customer===c.name}).map(function(x){return [esc(x.date),rp(x.amount)+(x.shipOnly==='Yes'?' (shipping)':'')]})}
+  return '<div class="card item" data-open="'+esc(id)+'"><div class="row"><b>'+esc(c.name)+chip(c.type)+pend(c)+'</b><b>'+rp(c.balance)+'</b></div>'
+  +'<div class="sub">'+chip(c.next).replace('margin-left:6px','')+' '+chip(c.status,'')+'</div>'
   +(o?det([['Contact',val(c.contact)],['Address',val(c.address)],['Courier',val(c.courier)],['Units (active / bought / waiting / to buy)',val(c.units)+' / '+val(c.bought)+' / '+val(c.waiting)+' / '+val(c.toBuy)],['Billable items',rp(c.billable)],['Items paid',rp(c.itemsPaid)],['Shipping fee / paid',rp(c.shipFee)+' / '+rp(c.shipPaid)],['Payment status',val(c.payStatus)],['Notes',val(c.notes)]])
-   +(lines.length?det([['Order lines','']].concat(lines)):'')+(pays.length?det([['Payments','']].concat(pays)):''):'')+'</div>'}).join('')||'<div class="k">Nothing found</div>';
+   +(lines.length?det([['Order lines','']].concat(lines)):'')+(pays.length?det([['Payments','']].concat(pays)):'')
+   +'<div class="btns"><button class="btn ghost sm" data-act="editCustomer" data-name="'+esc(c.name)+'">Edit</button><button class="btn ghost sm" data-act="newOrder" data-name="'+esc(c.name)+'" data-kind="customer">+ Order</button><button class="btn ghost sm" data-act="newPayment" data-name="'+esc(c.name)+'">+ Payment</button></div>':'')+'</div>'}).join('')||'<div class="k">Nothing found</div>';
 }
 function orders(){return bar('Search customer or product')+'<div id="list">'+orderList()+'</div>'}
 function orderList(){
  var q=S.q.toLowerCase();
- return D.orders.slice().reverse().filter(function(o){return !q||has(o.customer,q)||has(o.product,q)}).map(function(o){
+ return VW.orders.slice().reverse().filter(function(o){return !q||has(o.customer,q)||has(o.product,q)}).map(function(o){
   return '<div class="card'+(o.cancel==='Yes'?' muted':'')+'"><div class="row"><b>'+esc(o.customer)+'</b><b>'+rp(o.gross)+'</b></div>'
   +'<div>'+esc(o.product)+' x'+esc(o.qty)+chip(o.status)+'</div>'
-  +'<div class="sub">'+esc(o.date||'')+(o.note?' | '+esc(o.note):'')+' | bought '+val(o.bought)+', to buy '+val(o.toBuy)+', waiting pay '+val(o.waiting)+'</div></div>'}).join('')||'<div class="k">Nothing found</div>';
+  +'<div class="row"><div class="sub">'+esc(o.date||'')+(o.note?' | '+esc(o.note):'')+' | bought '+val(o.bought)+', to buy '+val(o.toBuy)+'</div>'
+  +(o.row&&o.cancel!=='Yes'?'<button class="btn ghost sm" data-act="editOrder" data-row="'+o.row+'">Edit</button>':'')+'</div></div>'}).join('')||'<div class="k">Nothing found</div>';
 }
-function shopping(){return '<label class="tgl"><input type="checkbox" id="onlyBuy"'+(S.onlyBuy?' checked':'')+'> Only products still to buy</label><div id="list">'+shopList()+'</div>'}
+function shopping(){return '<label class="tgl"><input type="checkbox" id="onlyBuy"'+(S.onlyBuy?' checked':'')+'> Only products still to buy</label><div class="sub" style="margin:0 2px 8px">Tap a product to log what you bought.</div><div id="list">'+shopList()+'</div>'}
 function shopList(){
- var L=D.shopping.filter(function(s){return !S.onlyBuy||num(s.toBuy)>0});
- var by={};L.forEach(function(s){var k=s.store||'No store';(by[k]=by[k]||[]).push(s)});
- var keys=Object.keys(by).sort();
- return keys.map(function(k){var tb=by[k].reduce(function(a,s){return a+(num(s.toBuy)||0)},0);
-  return '<div class="sec">'+esc(k)+' | to buy '+tb+'</div>'+by[k].map(function(s){
-   return '<div class="card"><div class="row"><b>'+esc(s.product)+'</b><b>'+val(s.toBuy)+' to buy</b></div>'
-   +'<div>'+chip(s.status)+(s.soldOut?chip('Sold out','bad'):'')+'</div>'
-   +'<div class="sub">Need now '+val(s.need)+' | waiting payment '+val(s.waiting)+' | bought '+val(s.bought)+' | paid '+yen(s.paidYen)+'</div></div>'}).join('')}).join('')||'<div class="k">Nothing to show</div>';
+ var L=VW.shopping.filter(function(s){return !S.onlyBuy||num(s.toBuy)>0});
+ var g={};L.forEach(function(s){var k=s.store||'No store';(g[k]=g[k]||[]).push(s)});
+ return Object.keys(g).sort().map(function(k){
+  return '<div class="sec">'+esc(k)+'</div>'+g[k].map(function(s){
+   var out=s.soldOut==='Sold Out',tb2=num(s.toBuy)||0,st=out?'out':tb2>0?'buy':'done',lab=out?'Sold out':tb2>0?tb2+' to buy':'Done',parts=[];
+   if(s.bought!==''&&s.bought!=null)parts.push('Bought '+s.bought+(s.need!==''?' of '+s.need:''));else if(num(s.need)>0)parts.push('Need '+s.need);
+   if(s.paidYen!==''&&s.paidYen!=null)parts.push('Paid '+yen(s.paidYen));
+   if(num(s.waiting)>0)parts.push(s.waiting+' waiting for payment');
+   return '<div class="card item s-'+st+'" data-act="logBuy" data-name="'+esc(s.product)+'"><div class="row"><b>'+esc(s.product)+pend(s)+'</b><b class="t-'+st+'">'+lab+'</b></div>'
+   +'<div class="sub">'+(esc(parts.join(' \u00b7 '))||'No units needed yet')+'</div></div>'}).join('')}).join('')||'<div class="k">Nothing to show</div>';
 }
 function payments(){
- var tot=D.payments.reduce(function(a,p){return a+(num(p.amount)||0)},0);
+ var tot=VW.payments.reduce(function(a,p){return a+(num(p.amount)||0)},0);
  return '<div class="card"><div class="k">Total received</div><div class="v">'+rp(tot)+'</div></div>'+bar('Search customer')+'<div id="list">'+payList()+'</div>';
 }
 function payList(){
  var q=S.q.toLowerCase();
- return D.payments.slice().reverse().filter(function(p){return !q||has(p.customer,q)}).map(function(p){
-  return '<div class="card"><div class="row"><b>'+esc(p.customer)+'</b><b>'+rp(p.amount)+'</b></div><div class="sub">'+esc(p.date||'')+(p.shipOnly==='Yes'?' | shipping only':'')+(p.note?' | '+esc(p.note):'')+'</div></div>'}).join('')||'<div class="k">Nothing found</div>';
+ return VW.payments.slice().reverse().filter(function(p){return !q||has(p.customer,q)}).map(function(p){
+  return '<div class="card"><div class="row"><b>'+esc(p.customer)+pend(p)+'</b><b>'+rp(p.amount)+'</b></div><div class="sub">'+esc(p.date||'')+(p.shipOnly==='Yes'?' | shipping only':'')+(p.note?' | '+esc(p.note):'')+'</div></div>'}).join('')||'<div class="k">Nothing found</div>';
 }
 var LISTS={catalog:catalogList,customers:customerList,orders:orderList,shopping:shopList,payments:payList};
 var VIEWS={home:home,catalog:catalog,customers:customers,orders:orders,shopping:shopping,payments:payments};
 var TITLES={home:'Home',catalog:'Catalog',customers:'Customers',orders:'Orders',shopping:'Shopping',payments:'Payments'};
+var ADD={catalog:'newProduct',customers:'newCustomer',orders:'newOrder',payments:'newPayment'};
 
 function setupView(){
  return '<div class="card"><b>Connect to your sheet</b><div class="k" style="margin:6px 0 10px">Paste the Web app URL (ends with /exec) and your secret key. They are saved only on this phone.</div>'
@@ -180,56 +243,196 @@ function setupView(){
  +'<button class="btn" data-act="save" style="width:100%">Save and sync</button>'
  +(cfg.url?'<button class="btn ghost" data-act="cancelSetup" style="width:100%;margin-top:8px">Cancel</button>':'')+'</div>';
 }
-function calcSheet(){
- var s=(D&&D.settings)||null;
- if(!s)return '<div class="overlay" data-act="closeCalc"><div class="sheet"><b>Calculator</b><p class="k">Sync once while online so the rates are saved on this phone.</p></div></div>';
- var opts=(s.surcharges||[]).map(function(x){return '<option value="'+esc(x)+'">'+rp(x)+'</option>'}).join('');
- return '<div class="overlay" id="ov"><div class="sheet"><div class="row"><b>Price calculator</b><button class="btn ghost" data-act="closeCalc">Close</button></div>'
- +'<label class="k">Price in yen</label><input id="c1" type="number" inputmode="decimal" placeholder="e.g. 2500">'
- +'<label class="k">Qty</label><input id="c2" type="number" inputmode="numeric" value="1">'
- +'<label class="k">Bulky surcharge (per item)</label><select id="c3">'+opts+'</select>'
- +'<div class="card" id="cr"><span class="k">Enter a yen price</span></div></div></div>';
+function render(){
+ var app=$('#app'),body='',keep=$('#main')?$('#main').scrollTop:0,fresh=false;
+ if(S.setup||!cfg.url||!cfg.key){body=setupView()}
+ else if(!VW){body='<div class="card">'+(S.loading?'Loading from your sheet...':'No saved data yet.')+'</div>'+(S.msg?'<div class="toast">'+esc(S.msg)+'</div>':'')}
+ else{body=(S.msg?'<div class="toast">'+esc(S.msg)+'</div>':'')+VIEWS[S.tab]()}
+ var np=Q.length,showAdd=VW&&!S.setup&&ADD[S.tab];
+ app.innerHTML='<header><h1>'+TITLES[S.tab]+'<small>'+(S.loading?'Syncing...':esc(when()))+'</small></h1>'
+  +(np?'<button class="btn warn sm" data-act="pend">Pending '+np+'</button>':'')
+  +'<button class="btn ghost sm" data-act="sync">Sync</button><button class="btn ghost sm" data-act="setup" aria-label="Settings">...</button></header>'
+  +'<main id="main">'+body+'</main>'
+  +(showAdd?'<button class="fab" data-act="'+ADD[S.tab]+'" aria-label="Add">+</button>':'')
+  +'<nav>'+Object.keys(TITLES).map(function(t){return '<button data-tab="'+t+'"'+(S.tab===t?' class="on"':'')+'>'+TITLES[t]+'</button>'}).join('')+'</nav>';
+ if($('#main'))$('#main').scrollTop=keep;
+}
+
+/* ---------- overlays and forms ---------- */
+function showOv(html){$('#ov').innerHTML='<div class="overlay" data-bg="1"><div class="sheet">'+html+'</div></div>'}
+function closeOv(){$('#ov').innerHTML='';form=null}
+function head(t){return '<div class="row" style="margin-bottom:8px"><b>'+esc(t)+'</b><button class="btn ghost sm" data-act="closeOv">Close</button></div>'}
+function dl(id,arr){return '<datalist id="'+id+'">'+arr.map(function(x){return '<option value="'+esc(x)+'">'}).join('')+'</datalist>'}
+function inp(label,id,type,v,extra){return '<label class="k">'+label+'</label><input id="'+id+'" type="'+type+'" value="'+esc(v==null?'':v)+'" '+(extra||'')+'>'}
+function selx(label,id,opts,v,blank){return '<label class="k">'+label+'</label><select id="'+id+'">'+(blank!=null?'<option value="">'+esc(blank)+'</option>':'')
+ +opts.map(function(o){var ov=typeof o==='object'?o.v:o,ol=typeof o==='object'?o.l:o;return '<option value="'+esc(ov)+'"'+(lc(ov)===lc(v)?' selected':'')+'>'+esc(ol)+'</option>'}).join('')+'</select>'}
+var surOpts=function(){return VW.settings.surcharges.map(function(x){return {v:x,l:rp(x)}})};
+var storeOpts=function(){return VW.settings.stores};
+var val$=function(id){var e=$('#'+id);return e?e.value.trim():''};
+var numOrBlank=function(id){var s=val$(id);return s===''?'':Number(s)};
+
+function openCalc(){
+ var s=VW&&VW.settings;
+ if(!s){showOv(head('Calculator')+'<p class="k">Sync once while online so the rates are saved on this phone.</p>');return}
+ showOv(head('Price calculator')+inp('Price in yen','c1','number','','inputmode="decimal" placeholder="e.g. 2500"')+inp('Qty','c2','number','1','inputmode="numeric"')
+  +selx('Bulky surcharge (per item)','c3',surOpts(),0)+'<div class="card" id="cr"><span class="k">Enter a yen price</span></div>');
 }
 function calcUpdate(){
- var s=D.settings,p=num($('#c1').value),q=num($('#c2').value)||1,sc=num($('#c3').value)||0,r=$('#cr');
+ var s=VW.settings,rate=num(VW.home.rate),p=num($('#c1').value),q=num($('#c2').value)||1,sc=num($('#c3').value)||0,r=$('#cr');
  if(bad(p)||p<=0){r.innerHTML='<span class="k">Enter a yen price</span>';return}
  var t1=p<=num(s.threshold),base=t1?p*num(s.t1Rate)+num(s.t1Fee):p*num(s.t2Rate),unit=base+sc;
  r.innerHTML='<div class="row"><span class="k">Rule used</span><span>'+(t1?'Tier 1 (up to '+yen(s.threshold)+')':'Tier 2 (above '+yen(s.threshold)+')')+'</span></div>'
   +'<div class="row"><span class="k">Converted price</span><b>'+rp(base)+'</b></div>'
   +'<div class="row"><span class="k">Unit selling price</span><b>'+rp(unit)+'</b></div>'
-  +'<div class="row"><span class="k">Total for '+q+'</span><b class="v">'+rp(unit*q)+'</b></div>';
+  +'<div class="row"><span class="k">Total for '+q+'</span><b class="v">'+rp(unit*q)+'</b></div>'
+  +(bad(rate)?'':'<div class="det"><div><span>Est. actual buying price (\u00a51 = Rp '+rate.toFixed(2)+')</span><span><b>'+rp(p*rate)+'</b></span></div>'+(q>1?'<div><span>Est. buying price for '+q+'</span><span>'+rp(p*rate*q)+'</span></div>':'')+'</div>');
+}
+function openOrder(pre){
+ pre=pre||{};
+ showOv(head('New order')+dl('dlc',VW.customers.map(function(c){return c.name}))+dl('dlp',VW.products.map(function(p){return p.name}))
+  +inp('Customer','f_cust','text',pre.customer||'','list="dlc" autocomplete="off" autocapitalize="words"')+'<div class="hint" id="h_cust"></div>'
+  +inp('Product','f_prod','text',pre.product||'','list="dlp" autocomplete="off"')+'<div class="hint" id="h_prod"></div>'
+  +'<div id="np" style="display:none">'+inp('Price in yen (new product)','f_yen','number','','inputmode="decimal"')+selx('Bulky surcharge','f_sur',surOpts(),'','(none)')+selx('Store','f_store',storeOpts(),'','(not sure yet)')+'</div>'
+  +inp('Qty','f_qty','number','1','inputmode="numeric" min="1"')+inp('Date','f_date','date',today())+inp('Note (optional)','f_note','text','')
+  +'<button class="btn" data-act="saveOrder" style="width:100%">Save order</button>');
+ form='order';orderHints();
+}
+function orderHints(){
+ var c=val$('f_cust'),p=val$('f_prod');
+ $('#h_cust').textContent=c&&!by(VW.customers,'name',c)?'New customer: will be added as type New.':'';
+ $('#h_prod').textContent=p&&!by(VW.products,'name',p)?'Not in the catalog yet. Fill in the yen price below.':'';
+ $('#np').style.display=p&&!by(VW.products,'name',p)?'block':'none';
+}
+function saveOrder(){
+ var cn=val$('f_cust'),pn=val$('f_prod'),qty=Number(val$('f_qty'));
+ if(!cn||!pn){alert('Customer and product are required');return}
+ if(!(qty>0)){alert('Quantity must be 1 or more');return}
+ var c=by(VW.customers,'name',cn),p=by(VW.products,'name',pn),d={customer:c?c.name:cn,product:p?p.name:pn,qty:qty,date:val$('f_date')||today(),note:val$('f_note')};
+ if(!p){var y=Number(val$('f_yen'));if(!(y>0)){alert('Enter the yen price for this new product');return}d.newProduct=true;d.yen=y;d.surcharge=numOrBlank('f_sur');d.store=val$('f_store')}
+ if(!c)enqueue('addCustomer',{name:cn,type:'New'},'New customer: '+cn);
+ enqueue('addOrder',d,'Order: '+d.customer+', '+d.product+' x'+qty);afterSave();
+}
+function openPayment(pre){
+ pre=pre||{};
+ showOv(head('New payment')+dl('dlc',VW.customers.map(function(c){return c.name}))
+  +inp('Customer','f_cust','text',pre.customer||'','list="dlc" autocomplete="off" autocapitalize="words"')
+  +inp('Amount (Rp)','f_amt','number','','inputmode="numeric"')+inp('Date','f_date','date',today())
+  +'<label class="tgl"><input type="checkbox" id="f_ship"> Shipping fee only</label>'+inp('Note (optional)','f_note','text','')
+  +'<button class="btn" data-act="savePayment" style="width:100%">Save payment</button>');
+}
+function savePayment(){
+ var cn=val$('f_cust'),c=by(VW.customers,'name',cn),amt=Number(val$('f_amt'));
+ if(!c){alert('Customer not found. Add the customer first (Customers tab).');return}
+ if(!(amt>0)){alert('Enter an amount above 0');return}
+ enqueue('addPayment',{customer:c.name,amount:amt,date:val$('f_date')||today(),shipOnly:$('#f_ship').checked,note:val$('f_note')},'Payment: '+c.name+' '+rp(amt));afterSave();
+}
+function openProduct(name){
+ var p=name?by(VW.products,'name',name):null,s=VW.settings;
+ showOv(head(p?'Edit product':'New product')+inp('Name','f_name','text',p?p.name:'',p?'readonly':'autocapitalize="words"')
+  +selx('Store','f_store',storeOpts(),p?p.store:'','(choose)')+inp('Or type a new store','f_newstore','text','')
+  +inp('Price in yen','f_yen','number',p?p.yen:'','inputmode="decimal"')+selx('Bulky surcharge','f_sur',surOpts(),p?p.surcharge:'','(none)')
+  +inp('Manual IDR price (optional)','f_man','number',p?p.manualIdr:'','inputmode="numeric"')+inp('Link','f_link','url',p?p.link:'','autocapitalize="off"')
+  +selx('IG status','f_ig',['Not posted','Posted','Skip'],p?p.ig:'Not posted')+inp('Notes','f_notes','text',p?p.notes:'')
+  +'<button class="btn" data-act="saveProduct" data-edit="'+(p?'1':'')+'" style="width:100%">Save product</button>');
+}
+function saveProduct(edit){
+ var name=val$('f_name'),ns=val$('f_newstore'),store=ns||val$('f_store'),yv=numOrBlank('f_yen'),man=numOrBlank('f_man');
+ if(!name){alert('Name is required');return}
+ if(!edit&&by(VW.products,'name',name)){alert('This product already exists. Open it in the Catalog and tap Edit.');return}
+ if(!(yv>0)&&!(man>0)){alert('Enter a yen price or a manual IDR price');return}
+ if(ns&&VW.settings.stores.map(lc).indexOf(lc(ns))<0)enqueue('addStore',{name:ns},'New store: '+ns);
+ var d={name:name,store:store,yen:yv,surcharge:numOrBlank('f_sur'),manualIdr:man,link:val$('f_link'),ig:val$('f_ig'),notes:val$('f_notes')};
+ enqueue(edit?'updateProduct':'addProduct',d,(edit?'Edit product: ':'New product: ')+name);afterSave();
+}
+function openCustomer(name){
+ var c=name?by(VW.customers,'name',name):null,s=VW.settings;
+ showOv(head(c?'Edit customer':'New customer')+inp('Name','f_name','text',c?c.name:'',c?'readonly':'autocapitalize="words"')
+  +selx('Type','f_type',['Trusted','New'],c?c.type:'New')+inp('Contact','f_contact','text',c?c.contact:'')+inp('Address','f_addr','text',c?c.address:'')
+  +selx('Courier','f_cour',s.couriers,c?c.courier:'','(not chosen)')+inp('Shipping fee (Rp)','f_fee','number',c?c.shipFee:'','inputmode="numeric"')
+  +selx('Status','f_status',['Shopping','Ready to Pack','Packed','Shipped','Delivered'],c?c.status:'Shopping')+inp('Notes','f_notes','text',c?c.notes:'')
+  +'<button class="btn" data-act="saveCustomer" data-edit="'+(c?'1':'')+'" style="width:100%">Save customer</button>');
+}
+function saveCustomer(edit){
+ var name=val$('f_name');if(!name){alert('Name is required');return}
+ if(!edit&&by(VW.customers,'name',name)){alert('This customer already exists. Open them in Customers and tap Edit.');return}
+ var d={name:name,type:val$('f_type'),contact:val$('f_contact'),address:val$('f_addr'),courier:val$('f_cour'),shipFee:numOrBlank('f_fee'),status:val$('f_status'),notes:val$('f_notes')};
+ enqueue(edit?'updateCustomer':'addCustomer',d,(edit?'Edit customer: ':'New customer: ')+name);afterSave();
+}
+function openBuy(name){
+ var s=by(VW.shopping,'product',name);if(!s)return;
+ showOv(head('Log purchase')+'<div style="margin-bottom:8px"><b>'+esc(s.product)+'</b><div class="sub">'+esc(s.store)+' | need now '+val(s.need)+' | waiting payment '+val(s.waiting)+'</div></div>'
+  +'<label class="k">Bought so far (total)</label><div class="step"><button class="btn ghost" data-act="dec">-</button>'+'<input id="f_b" type="number" inputmode="numeric" value="'+esc(s.bought)+'"><button class="btn ghost" data-act="inc">+</button></div>'
+  +inp('Paid so far in yen (total)','f_p','number',s.paidYen,'inputmode="decimal"')
+  +'<label class="tgl"><input type="checkbox" id="f_out"'+(s.soldOut==='Sold Out'?' checked':'')+'> Can\'t get more (sold out)</label>'
+  +'<button class="btn" data-act="saveBuy" data-name="'+esc(s.product)+'" style="width:100%">Save</button>');
+}
+function saveBuy(name){
+ var b=numOrBlank('f_b'),p=numOrBlank('f_p');
+ enqueue('upsertPurchase',{product:name,bought:b,paidYen:p,soldOut:$('#f_out').checked},'Bought: '+name+' '+(b===''?'-':b));afterSave();
+}
+function openOrderEdit(row){
+ var o=null;VW.orders.forEach(function(x){if(x.row===row)o=x});if(!o)return;
+ showOv(head('Edit order line')+'<div style="margin-bottom:8px"><b>'+esc(o.customer)+'</b><div class="sub">'+esc(o.product)+'</div></div>'
+  +inp('Qty','f_qty','number',o.qty,'inputmode="numeric" min="1"')+inp('Note','f_note','text',o.note)
+  +'<div class="btns"><button class="btn" data-act="saveOrderEdit" data-row="'+row+'">Save</button><button class="btn warn" data-act="cancelLine" data-row="'+row+'">Cancel this line</button></div>');
+}
+function orderByRow(row){var o=null;VW.orders.forEach(function(x){if(x.row===row)o=x});return o}
+function saveOrderEdit(row){
+ var o=orderByRow(row),qty=Number(val$('f_qty'));if(!o)return;if(!(qty>0)){alert('Quantity must be 1 or more');return}
+ enqueue('updateOrder',{row:row,expectCustomer:o.customer,expectProduct:o.product,qty:qty,note:val$('f_note')},'Edit order: '+o.customer+', '+o.product);afterSave();
+}
+function cancelLine(row){
+ var o=orderByRow(row);if(!o)return;if(!confirm('Cancel this order line for '+o.customer+'?'))return;
+ enqueue('cancelOrder',{row:row,expectCustomer:o.customer,expectProduct:o.product},'Cancel order: '+o.customer+', '+o.product);afterSave();
+}
+function openPending(){
+ showOv(head('Pending on this phone')+(Q.length?Q.map(function(it,i){return '<div class="card"><div>'+esc(it.label||it.action)+'</div>'
+  +(it.err?'<div class="err">'+esc(it.err)+'</div>':'<div class="sub">Waiting to sync</div>')+'<div class="btns"><button class="btn ghost sm" data-act="discard" data-i="'+i+'">Discard</button></div></div>'}).join('')
+  +'<button class="btn" data-act="retry" style="width:100%">Retry now</button>':'<p class="k">Nothing pending.</p>'));
 }
 
-function render(){
- var app=$('#app'),body='';
- if(S.setup||!cfg.url||!cfg.key){body=setupView()}
- else if(!D){body='<div class="card">'+(S.loading?'Loading from your sheet...':'No saved data yet.')+'</div>'+(S.msg?'<div class="toast">'+esc(S.msg)+'</div>':'')}
- else{body=(S.msg?'<div class="toast">'+esc(S.msg)+'</div>':'')+VIEWS[S.tab]()}
- app.innerHTML='<header><h1>'+TITLES[S.tab]+'<small>'+(S.loading?'Syncing...':esc(when()))+'</small></h1><button class="btn ghost" data-act="sync">Sync</button><button class="btn ghost" data-act="setup" aria-label="Settings">...</button></header>'
-  +'<main id="main">'+body+'</main>'
-  +'<nav>'+Object.keys(TITLES).map(function(t){return '<button data-tab="'+t+'"'+(S.tab===t?' class="on"':'')+'>'+TITLES[t]+'</button>'}).join('')+'</nav>'
-  +(S.calc?calcSheet():'');
-}
-
+/* ---------- events ---------- */
 document.addEventListener('click',function(e){
+ if(e.target.classList&&e.target.classList.contains('overlay')){closeOv();return}
  var t=e.target.closest('[data-tab],[data-act],[data-open]');if(!t)return;
  if(t.dataset.tab){S.tab=t.dataset.tab;S.q='';render();var m=$('#main');if(m)m.scrollTop=0;return}
- if(t.dataset.open){S.open[t.dataset.open]=!S.open[t.dataset.open];$('#list').innerHTML=LISTS[S.tab]();return}
- var a=t.dataset.act;
- if(a==='sync'){S.setup=false;sync()}
+ if(t.dataset.open){if(e.target.closest('[data-act],a'))return;S.open[t.dataset.open]=!S.open[t.dataset.open];$('#list').innerHTML=LISTS[S.tab]();return}
+ var a=t.dataset.act,n=t.dataset.name,r=t.dataset.row?Number(t.dataset.row):0;
+ if(a==='sync'){S.setup=false;sync(true)}
  else if(a==='setup'){S.setup=true;render()}
  else if(a==='cancelSetup'){S.setup=false;render()}
  else if(a==='save'){var u=$('#cu').value.trim(),k=$('#ck').value.trim();
   if(u.indexOf('https://script.google.com/')!==0){alert('The URL should start with https://script.google.com/');return}
   if(!k){alert('Please enter your secret key');return}
   cfg={url:u,key:k};ls.set('oc_url',u);ls.set('oc_key',k);S.setup=false;sync()}
- else if(a==='calc'){S.calc=true;render();calcUpdate()}
- else if(a==='closeCalc'){S.calc=false;render()}
+ else if(a==='closeOv')closeOv();
+ else if(!VW&&a!=='pend'){return}
+ else if(a==='calc'){openCalc();if(VW&&VW.settings)calcUpdate()}
+ else if(a==='newOrder'){openOrder(t.dataset.kind==='product'?{product:n}:t.dataset.kind==='customer'?{customer:n}:null)}
+ else if(a==='saveOrder')saveOrder();
+ else if(a==='newPayment'){openPayment(n?{customer:n}:null)}
+ else if(a==='savePayment')savePayment();
+ else if(a==='newProduct')openProduct();
+ else if(a==='editProduct')openProduct(n);
+ else if(a==='saveProduct')saveProduct(!!t.dataset.edit);
+ else if(a==='newCustomer')openCustomer();
+ else if(a==='editCustomer')openCustomer(n);
+ else if(a==='saveCustomer')saveCustomer(!!t.dataset.edit);
+ else if(a==='logBuy')openBuy(n);
+ else if(a==='saveBuy')saveBuy(n);
+ else if(a==='inc'||a==='dec'){var f=$('#f_b'),c=Number(f.value)||0;f.value=Math.max(0,c+(a==='inc'?1:-1))}
+ else if(a==='editOrder')openOrderEdit(r);
+ else if(a==='saveOrderEdit')saveOrderEdit(r);
+ else if(a==='cancelLine')cancelLine(r);
+ else if(a==='pend')openPending();
+ else if(a==='discard'){Q.splice(Number(t.dataset.i),1);saveQ();recalc();render();openPending()}
+ else if(a==='retry'){closeOv();sync(true)}
 });
 document.addEventListener('input',function(e){
  var id=e.target.id;
  if(id==='q'){S.q=e.target.value;$('#list').innerHTML=LISTS[S.tab]()}
- else if(id==='c1'||id==='c2'||id==='c3'){calcUpdate()}
+ else if(id==='c1'||id==='c2'){calcUpdate()}
+ else if(id==='f_cust'||id==='f_prod'){if(form==='order')orderHints()}
 });
 document.addEventListener('change',function(e){
  if(e.target.id==='onlyBuy'){S.onlyBuy=e.target.checked;$('#list').innerHTML=shopList()}

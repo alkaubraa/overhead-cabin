@@ -1,4 +1,4 @@
-const CACHE = 'oc-shell-v1';
+const CACHE = 'oc-shell-v2';
 const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {

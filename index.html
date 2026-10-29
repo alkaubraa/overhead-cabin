@@ -62,7 +62,7 @@ input[readonly]{opacity:.6}
 .tgl{display:flex;align-items:center;gap:8px;margin:0 2px 10px;color:var(--mute);font-size:13px}
 .nm{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;min-width:0}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.nm .chip,.chips .chip{margin-left:0}
+.nm .chip,.chips .chip{margin-left:0}.customer-type{color:var(--mute);font-size:13px;font-weight:500;margin-left:2px}
 .chips .chip{padding:3px 10px;font-size:12px}
 .step{display:flex;gap:8px;align-items:center}.step input{margin:4px 0 8px}.step .btn{margin-bottom:4px;padding:10px 16px}
 a{color:var(--acc)}
@@ -199,7 +199,7 @@ function customerList(){
  return VW.customers.filter(function(c){return !q||has(c.name,q)}).map(function(c){var id='c'+c.name,o=S.open[id],lines='',pays='';
   if(o){lines=VW.orders.filter(function(x){return x.customer===c.name}).map(function(x){return [esc(x.product)+' x'+esc(x.qty),chip(x.status)]});
    pays=VW.payments.filter(function(x){return x.customer===c.name}).map(function(x){return [esc(x.date),rp(x.amount)+(x.shipOnly==='Yes'?' (shipping)':'')]})}
-  return '<div class="card item" data-open="'+esc(id)+'"><div class="row" style="align-items:flex-start"><div class="nm"><b>'+esc(c.name)+'</b>'+(c.type?chip(c.type):chip('No type','warn'))+pend(c)+'</div><b>'+rp(c.balance)+'</b></div>'
+  return '<div class="card item" data-open="'+esc(id)+'"><div class="row" style="align-items:flex-start"><div class="nm"><b>'+esc(c.name)+'</b>'+(c.type?'<span class="customer-type">'+esc(c.type)+'</span>':'<span class="customer-type">No type</span>')+pend(c)+'</div><b>'+rp(c.balance)+'</b></div>'
   +'<div class="chips">'+chip(c.next)+chip(c.status,'')+'</div>'
   +(o?det([['Contact',val(c.contact)],['Address',val(c.address)],['Courier',val(c.courier)],['Units (active / bought / waiting / to buy)',val(c.units)+' / '+val(c.bought)+' / '+val(c.waiting)+' / '+val(c.toBuy)],['Billable items',rp(c.billable)],['Items paid',rp(c.itemsPaid)],['Shipping fee / paid',rp(c.shipFee)+' / '+rp(c.shipPaid)],['Payment status',val(c.payStatus)],['Notes',val(c.notes)]])
    +(lines.length?det([['Order lines','']].concat(lines)):'')+(pays.length?det([['Payments','']].concat(pays)):'')

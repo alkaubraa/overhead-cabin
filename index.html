@@ -257,18 +257,31 @@ function invoiceContent(name){
 }
 function invoiceMessage(name){
  var c=by(VW.customers,'name',name);if(!c)return '';
+ var settings=(D&&D.settings)||{},batch=settings.batch||'';
+ var itemTotal=num(c.billable)||0,shipping=num(c.shipFee)||0;
+ var paid=(num(c.itemsPaid)||0)+(num(c.shipPaid)||0);
+ var balance=num(c.balance);
+ if(balance==null)balance=itemTotal+shipping-paid;
  var orders=VW.orders.filter(function(o){return o.customer===name&&o.cancel!=='Yes'});
- var pays=VW.payments.filter(function(p){return p.customer===name});
- var items=orders.reduce(function(a,o){return a+(num(o.billable)!=null?num(o.billable):(num(o.gross)||0))},0);
- var shipping=num(c.shipFee)||0,paid=pays.reduce(function(a,p){return a+(num(p.amount)||0)},0);
- var total=items+shipping,balance=total-paid;
- var lines=['Hi '+name+',','Here is your Overhead Cabin order recap:'];
- if(orders.length){lines.push('Items:');orders.forEach(function(o){lines.push('• '+o.product+' × '+(o.qty||1)+' — '+rp(o.billable!=null&&o.billable!==''?o.billable:o.gross))})}
- lines.push('Items total: '+rp(items));
- if(shipping)lines.push('Shipping fee: '+rp(shipping));
- lines.push('Total: '+rp(total),'Payment received: '+rp(paid),'Balance: '+rp(balance));
- lines.push('Thank you for shopping with Overhead Cabin!');
- return lines.join('\\n');
+ var soldOutAmount=orders.reduce(function(a,o){
+   var qty=num(o.soldOut)||0,unit=num(o.unit)||0;
+   return a+qty*unit;
+ },0);
+ var courier=String(c.courier||'').trim().toLowerCase();
+ var address=String(c.address||'').trim();
+ var lines='Hi Kak '+name+'! Recap pesanan @Overhead.Cabin '+batch+': total barang Rp '+fixed0(itemTotal)
+   +(shipping>0?' + ongkir Rp '+fixed0(shipping):'')
+   +', sudah dibayar Rp '+fixed0(paid)
+   +(balance>0?', sisa Rp '+fixed0(balance)+'.':balance<0?', kelebihan Rp '+fixed0(-balance)+' akan direfund atau dipakai untuk ongkir.':', sudah lunas.')
+   +(soldOutAmount>0?' Barang sold out/unavailable akan dikembalikan 100% apabila sebelumnya sudah ada payment (Rp '+fixed0(soldOutAmount)+').':'')
+   +(courier==='pickup'?' Untuk instruksi pickup akan diinfokan setelah pelunasan & barang sudah siap di-pickup yah.':courier==='belum dipilih'?' Mohon infokan apakah akan melakukan pengiriman via JNE, kurir instan GoSend/Grab, atau akan melakukan pemesanan pickup kurir sendiri.':shipping===0?' Ongkir belum termasuk dan akan dihitung sesuai kurir pilihanmu.':'')
+   +(courier!=='pickup'&&!address?' Juga mohon infokan alamat & kontak untuk pengiriman.':'')
+   +' Terima kasih!';
+ return lines;
+}
+function fixed0(v){
+ var n=Number(v)||0;
+ return n.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}).replace(/,/g,'.');
 }
 function downloadInvoiceImage(name){
  var c=by(VW.customers,'name',name);if(!c){alert('Choose a customer first.');return}

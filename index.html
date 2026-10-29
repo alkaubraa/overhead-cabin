@@ -113,8 +113,8 @@ function applyQueue(d,q){
   else if(it.action==='addStore'){if(s.stores.map(lc).indexOf(lc(x.name))<0)s.stores.push(x.name)}
   else if(it.action==='addOrder'){p=by(v.products,'name',x.product);var u=p?p.selling:selling(s,x.yen,x.surcharge,'');
    v.orders.push({customer:x.customer,product:x.product,qty:x.qty,note:x.note||'',date:x.date,cancel:'',unit:u,gross:u===''?'':u*x.qty,bought:'',toBuy:'',waiting:'',status:'Pending',pending:true})}
-  else if(it.action==='updateOrder'||it.action==='cancelOrder'){o=null;v.orders.forEach(function(r){if(r.row===x.row)o=r});
-   if(o){if(it.action==='cancelOrder'){o.cancel='Yes';o.status='Cancelled'}else{if('qty' in x){o.qty=x.qty;if(o.unit!=='')o.gross=o.unit*x.qty}if('note' in x)o.note=x.note}o.pending=true}}
+  else if(it.action==='updateOrder'||it.action==='cancelOrder'||it.action==='reactivateOrder'){o=null;v.orders.forEach(function(r){if(r.row===x.row)o=r});
+   if(o){if(it.action==='cancelOrder'){o.cancel='Yes';o.status='Cancelled'}else{if('qty' in x){o.qty=x.qty;if(o.unit!=='')o.gross=o.unit*x.qty}if('note' in x)o.note=x.note;if(it.action==='reactivateOrder'){o.cancel='';o.status='Pending'}}o.pending=true}}
   else if(it.action==='addPayment'){v.payments.push({customer:x.customer,amount:x.amount,date:x.date,shipOnly:x.shipOnly?'Yes':'',note:x.note||'',pending:true});
    c=by(v.customers,'name',x.customer);if(c&&num(c.balance)!=null)c.balance=num(c.balance)-x.amount}
   else if(it.action==='upsertPurchase'){sh=by(v.shopping,'product',x.product);if(sh){sh.bought=x.bought;sh.paidYen=x.paidYen;sh.soldOut=x.soldOut?'Sold Out':'';
@@ -218,7 +218,7 @@ function orderList(){
   return '<div class="card'+(o.cancel==='Yes'?' muted':'')+'"><div class="row"><b>'+esc(o.customer)+'</b><b>'+rp(o.gross)+'</b></div>'
   +'<div>'+esc(o.product)+' x'+esc(o.qty)+chip(o.status)+'</div>'
   +'<div class="row"><div class="sub">'+esc(o.date||'')+(o.note?' | '+esc(o.note):'')+' | bought '+val(o.bought)+', to buy '+val(o.toBuy)+'</div>'
-  +(o.row?'<button class="btn ghost sm" data-act="editOrder" data-row="'+o.row+'">Edit</button>'+(o.cancel==='Yes'?'<button class="btn ghost sm" data-act="reactivateOrder" data-row="'+o.row+'">Reactivate</button>':''):'')+'</div></div>'}).join('')||'<div class="k">Nothing found</div>';
+  +(o.row?'<button class="btn ghost sm" data-act="editOrder" data-row="'+o.row+'">Edit</button>':'')+'</div></div>'}).join('')||'<div class="k">Nothing found</div>';
 }
 function shopping(){return '<label class="tgl"><input type="checkbox" id="onlyBuy"'+(S.onlyBuy?' checked':'')+'> Only products still to buy</label><div class="sub" style="margin:0 2px 8px">Tap a product to log what you bought.</div><div id="list">'+shopList()+'</div>'}
 function shopList(){
@@ -518,7 +518,7 @@ function openOrderEdit(row){
  var o=null;VW.orders.forEach(function(x){if(x.row===row)o=x});if(!o)return;
  showOv(head('Edit order line')+'<div style="margin-bottom:8px"><b>'+esc(o.customer)+'</b><div class="sub">'+esc(o.product)+'</div></div>'
   +inp('Qty','f_qty','number',o.qty,'inputmode="numeric" min="1"')+inp('Note','f_note','text',o.note)
-  +'<div class="btns"><button class="btn" data-act="saveOrderEdit" data-row="'+row+'">Save</button><button class="btn warn" data-act="cancelLine" data-row="'+row+'">Cancel this line</button></div>');
+  +'<div class="btns"><button class="btn" data-act="'+(o.cancel==='Yes'?'reactivateOrder':'saveOrderEdit')+'" data-row="'+row+'">'+(o.cancel==='Yes'?'Reactivate':'Save')+'</button>'+(o.cancel==='Yes'?'':'<button class="btn warn" data-act="cancelLine" data-row="'+row+'">Cancel this line</button>')+'</div>');
 }
 function orderByRow(row){var o=null;VW.orders.forEach(function(x){if(x.row===row)o=x});return o}
 function saveOrderEdit(row){
@@ -530,9 +530,10 @@ function cancelLine(row){
  enqueue('cancelOrder',{row:row,expectCustomer:o.customer,expectProduct:o.product},'Cancel order: '+o.customer+', '+o.product);afterSave();
 }
 function reactivateOrder(row){
- var o=orderByRow(row);if(!o||o.cancel!=='Yes')return;
- if(!confirm('Reactivate this order line for '+o.customer+'?'))return;
- enqueue('reactivateOrder',{row:row,expectCustomer:o.customer,expectProduct:o.product},'Reactivate order: '+o.customer+', '+o.product);afterSave();
+ var o=orderByRow(row),qty=Number(val$('f_qty'));if(!o||o.cancel!=='Yes')return;
+ if(!(qty>0)){alert('Quantity must be 1 or more');return}
+ if(!confirm('Save changes and reactivate this order line for '+o.customer+'?'))return;
+ enqueue('reactivateOrder',{row:row,expectCustomer:o.customer,expectProduct:o.product,qty:qty,note:val$('f_note')},'Reactivate order: '+o.customer+', '+o.product);afterSave();
 }
 function openPending(){
  showOv(head('Pending on this phone')+(Q.length?Q.map(function(it,i){return '<div class="card"><div>'+esc(it.label||it.action)+'</div>'

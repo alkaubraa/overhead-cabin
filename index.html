@@ -213,10 +213,10 @@ function shopping(){return '<label class="tgl"><input type="checkbox" id="onlyBu
 function shopList(){
  var L=VW.shopping.filter(function(s){return !S.onlyBuy||num(s.toBuy)>0});
  var g={};L.forEach(function(s){var k=s.store||'No store';(g[k]=g[k]||[]).push(s)});
- return Object.keys(g).sort().map(function(k){
-  return '<div class="sec">'+esc(k)+'</div>'+g[k].map(function(s){
+ return Object.keys(g).sort().map(function(k){var tb=g[k].reduce(function(a,s){return a+(num(s.toBuy)||0)},0);
+  return '<div class="sec row"><span>'+esc(k)+'</span><span class="'+(tb>0?'t-buy':'t-done')+'">'+(tb>0?tb+' to buy':'Done')+'</span></div>'+g[k].map(function(s){
    var out=s.soldOut==='Sold Out',tb2=num(s.toBuy)||0,st=out?'out':tb2>0?'buy':'done',lab=out?'Sold out':tb2>0?tb2+' to buy':'Done',parts=[];
-   if(s.bought!==''&&s.bought!=null)parts.push('Bought '+s.bought+(s.need!==''?' of '+s.need:''));else if(num(s.need)>0)parts.push('Need '+s.need);
+   parts.push('Bought '+(num(s.bought)||0)+' of '+(num(s.need)||0));
    if(s.paidYen!==''&&s.paidYen!=null)parts.push('Paid '+yen(s.paidYen));
    if(num(s.waiting)>0)parts.push(s.waiting+' waiting for payment');
    return '<div class="card item s-'+st+'" data-act="logBuy" data-name="'+esc(s.product)+'"><div class="row"><b>'+esc(s.product)+pend(s)+'</b><b class="t-'+st+'">'+lab+'</b></div>'

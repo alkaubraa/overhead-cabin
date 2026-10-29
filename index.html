@@ -371,6 +371,11 @@ function downloadInvoiceImage(name){
  }
  if(logo&&logo.complete&&logo.naturalWidth)finish();else if(logo)logo.onload=finish;else finish();
 }
+var LISTS={catalog:catalogList,customers:customerList,orders:orderList,shopping:shopList,payments:payList};
+var VIEWS={home:home,catalog:catalog,customers:customers,orders:orders,shopping:shopping,payments:payments,invoice:invoice};
+var TITLES={home:'Home',catalog:'Catalog',customers:'Customers',orders:'Orders',shopping:'Shopping',payments:'Payments',invoice:'Invoice'};
+var ADD={catalog:'newProduct',customers:'newCustomer',orders:'newOrder',payments:'newPayment'};
+
 function setupView(){
  return '<div class="card"><b>Connect to your sheet</b><div class="k" style="margin:6px 0 10px">Paste the Web app URL (ends with /exec) and your secret key. They are saved only on this phone.</div>'
  +'<label class="k">Web app URL</label><input id="cu" type="url" placeholder="https://script.google.com/macros/s/.../exec" value="'+esc(cfg.url)+'" autocomplete="off" autocapitalize="off">'

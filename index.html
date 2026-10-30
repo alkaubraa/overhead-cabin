@@ -166,9 +166,9 @@ function applyQueue(d,q){
   else if(it.action==='updateProduct'){p=by(v.products,'name',x.name);if(p){['store','yen','surcharge','manualIdr','link','ig','notes'].forEach(function(k){if(k in x)p[k]=x[k]});p.selling=selling(s,p.yen,p.surcharge,p.manualIdr);p.pending=true}}
   else if(it.action==='addStore'){if(s.stores.map(lc).indexOf(lc(x.name))<0)s.stores.push(x.name)}
   else if(it.action==='addOrder'){p=by(v.products,'name',x.product);var u=p?p.selling:selling(s,x.yen,x.surcharge,'');
-   v.orders.push({customer:x.customer,product:x.product,qty:x.qty,note:x.note||'',date:x.date,cancel:'',unit:u,gross:u===''?'':u*x.qty,bought:'',toBuy:'',waiting:'',status:'Pending',pending:true})}
+   v.orders.push({customer:x.customer,product:x.product,qty:x.qty,variant:x.variant||'',note:x.note||'',date:x.date,cancel:'',unit:u,gross:u===''?'':u*x.qty,bought:'',toBuy:'',waiting:'',status:'Pending',pending:true})}
   else if(it.action==='updateOrder'||it.action==='cancelOrder'||it.action==='reactivateOrder'){o=null;v.orders.forEach(function(r){if(r.row===x.row)o=r});
-   if(o){if(it.action==='cancelOrder'){o.cancel='Yes';o.status='Cancelled'}else{if('qty' in x){o.qty=x.qty;if(o.unit!=='')o.gross=o.unit*x.qty}if('note' in x)o.note=x.note;if(it.action==='reactivateOrder'){o.cancel='';o.status='Pending'}}o.pending=true}}
+   if(o){if(it.action==='cancelOrder'){o.cancel='Yes';o.status='Cancelled'}else{if('qty' in x){o.qty=x.qty;if(o.unit!=='')o.gross=o.unit*x.qty}if('variant' in x)o.variant=x.variant;if('note' in x)o.note=x.note;if(it.action==='reactivateOrder'){o.cancel='';o.status='Pending'}}o.pending=true}}
   else if(it.action==='addPayment'){v.payments.push({customer:x.customer,amount:x.amount,date:x.date,shipOnly:x.shipOnly?'Yes':'',note:x.note||'',pending:true});
    c=by(v.customers,'name',x.customer);if(c&&num(c.balance)!=null)c.balance=num(c.balance)-x.amount}
   else if(it.action==='upsertPurchase'){sh=by(v.shopping,'product',x.product);if(sh){sh.bought=x.bought;sh.paidYen=x.paidYen;sh.soldOut=x.soldOut?'Sold Out':'';
@@ -270,7 +270,7 @@ function orderList(){
  var q=S.q.toLowerCase();
  return VW.orders.slice().reverse().filter(function(o){return !q||has(o.customer,q)||has(o.product,q)}).map(function(o){
   return '<div class="card'+(o.cancel==='Yes'?' muted':'')+'"><div class="row"><b>'+esc(o.customer)+'</b><b>'+rp(o.gross)+'</b></div>'
-  +'<div>'+esc(o.product)+' x'+esc(o.qty)+chip(o.status)+'</div>'
+  +'<div>'+esc(o.product)+' x'+esc(o.qty)+chip(o.status)+'</div>'+(o.variant?'<div class="sub">'+esc(o.variant)+'</div>':'')
   +'<div class="row"><div class="sub">'+esc(o.date||'')+(o.note?' | '+esc(o.note):'')+' | bought '+val(o.bought)+', to buy '+val(o.toBuy)+'</div>'
   +(o.row?'<button class="btn ghost sm" data-act="editOrder" data-row="'+o.row+'">Edit</button>':'')+'</div></div>'}).join('')||'<div class="k">Nothing found</div>';
 }
@@ -314,7 +314,7 @@ function payList(){
 }
 function invoice(){
  var opts=VW.customers.map(function(c){return {v:c.name,l:c.name}}),chosen=S.invoiceCustomer||(VW.customers[0]?VW.customers[0].name:'');
- return '<div class="card"><div class="k">Choose customer</div><select id="invoiceCustomer">'+opts.map(function(o){return '<option value="'+esc(o.v)+'"'+(o.v===chosen?' selected':'')+'>'+esc(o.l)+'</option>'}).join('')+'</select><div class="btns"><button class="btn" data-act="downloadInvoiceImage">Download invoice</button><button class="btn ghost" data-act="copyInvoice">Copy message</button></div><div class="k" style="margin-top:10px">Message recap for '+esc(chosen)+'</div><textarea id="invoiceMessageText" rows="5" readonly style="width:100%;margin-top:6px">'+esc(invoiceMessage(chosen))+'</textarea></div>'+invoiceContent(chosen);
+ return '<div class="card"><div class="k">Choose customer</div><select id="invoiceCustomer">'+opts.map(function(o){return '<option value="'+esc(o.v)+'"'+(o.v===chosen?' selected':'')+'>'+esc(o.l)+'</option>'}).join('')+'</select><div class="btns"><button class="btn" data-act="downloadInvoiceImage">Download invoice</button><button class="btn ghost" data-act="copyInvoice">Copy message</button></div><div class="k" style="margin-top:10px">Message recap for '+esc(chosen)+'</div><textarea id="invoiceMessageText" rows="14" readonly style="width:100%;margin-top:6px">'+esc(invoiceMessage(chosen))+'</textarea></div>'+invoiceContent(chosen);
 }
 function invoiceContent(name){
  var c=by(VW.customers,'name',name);if(!c)return '<div class="card">Choose a customer to view invoice.</div>';
@@ -339,14 +339,17 @@ function invoiceMessage(name){
  },0);
  var courier=String(c.courier||'').trim().toLowerCase();
  var address=String(c.address||'').trim();
- var lines='Hi Kak '+name+'! Recap pesanan @Overhead.Cabin '+batch+': total barang Rp '+fixed0(itemTotal)
+ var greet='Hi Kak '+name+'!';
+ var recap='Recap pesanan @Overhead.Cabin '+batch+': total barang Rp '+fixed0(itemTotal)
    +(shipping>0?' + ongkir Rp '+fixed0(shipping):'')
    +', sudah dibayar Rp '+fixed0(paid)
    +(balance>0?', sisa Rp '+fixed0(balance)+'.':balance<0?', kelebihan Rp '+fixed0(-balance)+' akan direfund atau dipakai untuk ongkir.':', sudah lunas.')
-   +(soldOutAmount>0?' Barang sold out/unavailable akan dikembalikan 100% apabila sebelumnya sudah ada payment (Rp '+fixed0(soldOutAmount)+').':'')
-   +(courier==='pickup'?' Untuk instruksi pickup akan diinfokan setelah pelunasan & barang sudah siap di-pickup yah.':courier==='belum dipilih'?' Mohon infokan apakah akan melakukan pengiriman via JNE, kurir instan GoSend/Grab, atau akan melakukan pemesanan pickup kurir sendiri.':shipping===0?' Ongkir belum termasuk dan akan dihitung sesuai kurir pilihanmu.':'')
-   +(courier!=='pickup'&&!address?' Juga mohon infokan alamat & kontak untuk pengiriman.':'')
-   +' Terima kasih!';
+   +(soldOutAmount>0?' Barang sold out/unavailable akan dikembalikan 100% apabila sebelumnya sudah ada payment (Rp '+fixed0(soldOutAmount)+').':'');
+ var logistic=((courier==='pickup'?' Untuk instruksi pickup akan diinfokan setelah pelunasan & barang sudah siap di-pickup yah.':courier==='belum dipilih'?' Mohon infokan apakah akan melakukan pengiriman via JNE, kurir instan GoSend/Grab, atau akan melakukan pemesanan pickup kurir sendiri.':shipping===0?' Ongkir belum termasuk dan akan dihitung sesuai kurir pilihanmu.':'')
+   +(courier!=='pickup'&&!address?' Juga mohon infokan alamat & kontak untuk pengiriman.':'')).trim();
+ var bank=String(settings.bankAccount||'').trim();
+ var parts=[greet,recap,logistic,'Terima kasih!',bank?'Transfer ke '+bank:''].filter(function(t){return t!==''});
+ var lines=parts.join('\n\n');
  return lines;
 }
 function fixed0(v){
@@ -381,7 +384,8 @@ function downloadInvoiceImage(name){
  // Dynamic height prevents overlap and clips neither long order nor payment lists.
  var headerHeight=360;
  // Reserve enough vertical space for every rendered section and its summary.
- var height=1500+orders.length*rowH+pays.length*payRowH;
+ var varLineH=30,varRows=orders.filter(function(o){return String(o.variant||'').trim()}).length;
+ var height=1500+orders.length*rowH+varRows*varLineH+pays.length*payRowH;
  canvas.width=W*scale;canvas.height=height*scale;ctx=canvas.getContext('2d');ctx.scale(scale,scale);
  ctx.fillStyle='#fff';ctx.fillRect(0,0,W,height);
  function finish(){
@@ -405,10 +409,11 @@ function downloadInvoiceImage(name){
    y+=22;line(y);y+=48;
    if(!orders.length){text('No active order items',pad,y,'23px Arial',ink);y+=rowH;line(y-rowH/2)}
    orders.forEach(function(o){
-     var itemLabel=o.product+(String(o.variant||o.color||o.size||'').trim()?' · '+String(o.variant||o.color||o.size).trim():'');
-     text(fitText(itemLabel,W-2*pad-440,'23px Arial'),pad,y,'23px Arial',ink);
+     var variant=String(o.variant||'').trim();
+     text(fitText(o.product,W-2*pad-440,'23px Arial'),pad,y,'23px Arial',ink);
      text(o.qty||1,W-pad-330,y,'23px Arial',ink);
      amount(rp(o.billable!=null&&o.billable!==''?o.billable:o.gross),W-pad,y,'23px Arial',ink);
+     if(variant){text(fitText(variant,W-2*pad-440,'19px Arial'),pad,y+30,'19px Arial',muted);y+=varLineH}
      y+=rowH;line(y-rowH/2);
    });
    y+=52;text('PAYMENTS',pad,y,'bold 27px Arial',ink);y+=40;
@@ -504,7 +509,7 @@ function openOrder(pre){
   +inp('Customer','f_cust','text',pre.customer||'','list="dlc" autocomplete="off" autocapitalize="words"')+'<div class="hint" id="h_cust"></div>'
   +inp('Product','f_prod','text',pre.product||'','list="dlp" autocomplete="off"')+'<div class="hint" id="h_prod"></div>'
   +'<div id="np" style="display:none">'+inp('Price in yen (new product)','f_yen','number','','inputmode="decimal"')+selx('Bulky surcharge','f_sur',surOpts(),'','(none)')+selx('Store','f_store',storeOpts(),'','(not sure yet)')+'</div>'
-  +inp('Qty','f_qty','number','1','inputmode="numeric" min="1"')+inp('Date','f_date','date',today())+inp('Note (optional)','f_note','text','')
+  +inp('Variant (optional)','f_variant','text','','autocomplete="off"')+inp('Qty','f_qty','number','1','inputmode="numeric" min="1"')+inp('Date','f_date','date',today())+inp('Note (optional)','f_note','text','')
   +'<button class="btn" data-act="saveOrder" style="width:100%">Save order</button>');
  form='order';orderHints();
 }
@@ -518,7 +523,7 @@ function saveOrder(){
  var cn=val$('f_cust'),pn=val$('f_prod'),qty=Number(val$('f_qty'));
  if(!cn||!pn){alert('Customer and product are required');return}
  if(!(qty>0)){alert('Quantity must be 1 or more');return}
- var c=by(VW.customers,'name',cn),p=by(VW.products,'name',pn),d={customer:c?c.name:cn,product:p?p.name:pn,qty:qty,date:val$('f_date')||today(),note:val$('f_note')};
+ var c=by(VW.customers,'name',cn),p=by(VW.products,'name',pn),d={customer:c?c.name:cn,product:p?p.name:pn,qty:qty,date:val$('f_date')||today(),variant:val$('f_variant'),note:val$('f_note')};
  if(!p){var y=Number(val$('f_yen'));if(!(y>0)){alert('Enter the yen price for this new product');return}d.newProduct=true;d.yen=y;d.surcharge=numOrBlank('f_sur');d.store=val$('f_store')}
  if(!c)enqueue('addCustomer',{name:cn,type:'New'},'New customer: '+cn);
  enqueue('addOrder',d,'Order: '+d.customer+', '+d.product+' x'+qty);afterSave();
@@ -589,13 +594,13 @@ function saveBuy(row){
 function openOrderEdit(row){
  var o=null;VW.orders.forEach(function(x){if(x.row===row)o=x});if(!o)return;
  showOv(head('Edit order line')+'<div style="margin-bottom:8px"><b>'+esc(o.customer)+'</b><div class="sub">'+esc(o.product)+'</div></div>'
-  +inp('Qty','f_qty','number',o.qty,'inputmode="numeric" min="1"')+inp('Note','f_note','text',o.note)
+  +inp('Variant','f_variant','text',o.variant||'')+inp('Qty','f_qty','number',o.qty,'inputmode="numeric" min="1"')+inp('Note','f_note','text',o.note||'')
   +'<div class="btns"><button class="btn" data-act="'+(o.cancel==='Yes'?'reactivateOrder':'saveOrderEdit')+'" data-row="'+row+'">'+(o.cancel==='Yes'?'Reactivate':'Save')+'</button>'+(o.cancel==='Yes'?'':'<button class="btn warn" data-act="cancelLine" data-row="'+row+'">Cancel this line</button>')+'</div>');
 }
 function orderByRow(row){var o=null;VW.orders.forEach(function(x){if(x.row===row)o=x});return o}
 function saveOrderEdit(row){
  var o=orderByRow(row),qty=Number(val$('f_qty'));if(!o)return;if(!(qty>0)){alert('Quantity must be 1 or more');return}
- enqueue('updateOrder',{row:row,expectCustomer:o.customer,expectProduct:o.product,qty:qty,note:val$('f_note')},'Edit order: '+o.customer+', '+o.product);afterSave();
+ enqueue('updateOrder',{row:row,expectCustomer:o.customer,expectProduct:o.product,qty:qty,variant:val$('f_variant'),note:val$('f_note')},'Edit order: '+o.customer+', '+o.product);afterSave();
 }
 function cancelLine(row){
  var o=orderByRow(row);if(!o)return;if(!confirm('Cancel this order line for '+o.customer+'?'))return;
@@ -605,7 +610,7 @@ function reactivateOrder(row){
  var o=orderByRow(row),qty=Number(val$('f_qty'));if(!o||o.cancel!=='Yes')return;
  if(!(qty>0)){alert('Quantity must be 1 or more');return}
  if(!confirm('Save changes and reactivate this order line for '+o.customer+'?'))return;
- enqueue('reactivateOrder',{row:row,expectCustomer:o.customer,expectProduct:o.product,qty:qty,note:val$('f_note')},'Reactivate order: '+o.customer+', '+o.product);afterSave();
+ enqueue('reactivateOrder',{row:row,expectCustomer:o.customer,expectProduct:o.product,qty:qty,variant:val$('f_variant'),note:val$('f_note')},'Reactivate order: '+o.customer+', '+o.product);afterSave();
 }
 function openPending(){
  showOv(head('Pending on this phone')+(Q.length?Q.map(function(it,i){return '<div class="card"><div>'+esc(it.label||it.action)+'</div>'

@@ -155,22 +155,32 @@ var saveQ=function(){ls.set('oc_queue',JSON.stringify(Q))};
 /* ---------- helpers on data ---------- */
 function lc(s){return String(s==null?'':s).trim().toLowerCase()}
 function by(arr,key,name){var n=lc(name);if(!n)return null;for(var i=0;i<arr.length;i++)if(lc(arr[i][key])===n)return arr[i];return null}
-function selling(s,yenP,sur,manual){var m=num(manual);if(m>0)return m;var y=num(yenP);if(!(y>0))return '';
- var base=y<=num(s.threshold)?y*num(s.t1Rate)+num(s.t1Fee):y*num(s.t2Rate);return base+(num(sur)||0)}
+function selling(s,yenP,sur,manual,member){var m=num(manual);if(m>0)return m;var y=num(yenP);if(!(y>0))return '';
+ var thr=num(s.threshold),base;
+ if(member&&s.icReady)base=y<thr?y*num(s.memberT1Rate)+num(s.memberFee):y*num(s.memberT2Rate);
+ else base=y<thr?y*num(s.t1Rate)+num(s.t1Fee):y*num(s.t2Rate);
+ return base+(num(sur)||0)}
+function icRows(c){if(!VW.settings.icReady)return [];var r=[];
+ if(c.referredBy)r.push(['Referred by',esc(c.referredBy)],['Referral status',val(c.referralStatus)]);
+ if(c.member==='Yes')r.push(['Cashback earned',rp(c.cashbackEarned)],['Used as credit / transferred',rp(c.creditUsed)+' / '+rp(c.cashbackOut)],['Cashback balance','<b>'+rp(c.cashbackBalance)+'</b>']);
+ return r}
 function applyQueue(d,q){
  var v=JSON.parse(JSON.stringify(d)),s=v.settings;
- q.forEach(function(it){var x=it.data,c,p,o,sh;
-  if(it.action==='addCustomer'){if(!by(v.customers,'name',x.name))v.customers.push({name:x.name,type:x.type||'New',contact:x.contact||'',address:x.address||'',courier:x.courier||'',units:0,bought:0,waiting:0,toBuy:0,billable:0,itemsPaid:0,shipFee:x.shipFee||'',shipPaid:0,balance:0,payStatus:'No order',status:x.status||'Shopping',next:'No items yet',notes:x.notes||'',pending:true})}
-  else if(it.action==='updateCustomer'){c=by(v.customers,'name',x.name);if(c){['type','contact','address','courier','shipFee','status','notes'].forEach(function(k){if(k in x)c[k]=x[k]});c.pending=true}}
+ q.forEach(function(it){var x=it.data,c,p,o,sh,cm;
+  if(it.action==='addCustomer'){if(!by(v.customers,'name',x.name))v.customers.push({name:x.name,type:x.type||'New',contact:x.contact||'',address:x.address||'',courier:x.courier||'',units:0,bought:0,waiting:0,toBuy:0,billable:0,itemsPaid:0,shipFee:x.shipFee||'',shipPaid:0,balance:0,payStatus:'No order',status:x.status||'Shopping',next:'No items yet',notes:x.notes||'',member:x.member||'',referredBy:x.referredBy||'',referralStatus:'',cashbackEarned:'',creditUsed:'',cashbackOut:'',cashbackBalance:'',pending:true})}
+  else if(it.action==='updateCustomer'){c=by(v.customers,'name',x.name);if(c){['type','contact','address','courier','shipFee','status','notes','member','referredBy'].forEach(function(k){if(k in x)c[k]=x[k]});c.pending=true}}
   else if(it.action==='addProduct'){if(!by(v.products,'name',x.name))v.products.push({name:x.name,store:x.store||'',yen:x.yen,surcharge:x.surcharge,manualIdr:x.manualIdr,link:x.link||'',ig:x.ig||'Not posted',notes:x.notes||'',selling:selling(s,x.yen,x.surcharge,x.manualIdr),ordered:0,pending:true})}
   else if(it.action==='updateProduct'){p=by(v.products,'name',x.name);if(p){['store','yen','surcharge','manualIdr','link','ig','notes'].forEach(function(k){if(k in x)p[k]=x[k]});p.selling=selling(s,p.yen,p.surcharge,p.manualIdr);p.pending=true}}
   else if(it.action==='addStore'){if(s.stores.map(lc).indexOf(lc(x.name))<0)s.stores.push(x.name)}
-  else if(it.action==='addOrder'){p=by(v.products,'name',x.product);var u=p?p.selling:selling(s,x.yen,x.surcharge,'');
+  else if(it.action==='addOrder'){p=by(v.products,'name',x.product);cm=by(v.customers,'name',x.customer);var mem=!!(cm&&cm.member==='Yes');var u=p?((mem&&!(num(p.manualIdr)>0)&&num(p.yen)>0)?selling(s,p.yen,p.surcharge,'',true):p.selling):selling(s,x.yen,x.surcharge,'',mem);
    v.orders.push({customer:x.customer,product:x.product,qty:x.qty,variant:x.variant||'',note:x.note||'',date:x.date,cancel:'',unit:u,gross:u===''?'':u*x.qty,bought:'',toBuy:'',waiting:'',status:'Pending',pending:true})}
   else if(it.action==='updateOrder'||it.action==='cancelOrder'||it.action==='reactivateOrder'){o=null;v.orders.forEach(function(r){if(r.row===x.row)o=r});
    if(o){if(it.action==='cancelOrder'){o.cancel='Yes';o.status='Cancelled'}else{if('qty' in x){o.qty=x.qty;if(o.unit!=='')o.gross=o.unit*x.qty}if('variant' in x)o.variant=x.variant;if('note' in x)o.note=x.note;if(it.action==='reactivateOrder'){o.cancel='';o.status='Pending'}}o.pending=true}}
   else if(it.action==='addPayment'){v.payments.push({customer:x.customer,amount:x.amount,date:x.date,shipOnly:x.shipOnly?'Yes':'',note:x.note||'',pending:true});
    c=by(v.customers,'name',x.customer);if(c&&num(c.balance)!=null)c.balance=num(c.balance)-x.amount}
+  else if(it.action==='useCashbackCredit'){v.payments.push({customer:x.customer,amount:x.amount,date:x.date,shipOnly:'',note:'Referral credit',pending:true});c=by(v.customers,'name',x.customer);
+   if(c){if(num(c.balance)!=null)c.balance=num(c.balance)-x.amount;c.creditUsed=(num(c.creditUsed)||0)+x.amount;c.cashbackBalance=(num(c.cashbackBalance)||0)-x.amount;c.pending=true}}
+  else if(it.action==='payoutCashback'){c=by(v.customers,'name',x.customer);if(c){c.cashbackOut=(num(c.cashbackOut)||0)+x.amount;c.cashbackBalance=(num(c.cashbackBalance)||0)-x.amount;c.pending=true}}
   else if(it.action==='upsertPurchase'){sh=by(v.shopping,'product',x.product);if(sh){sh.bought=x.bought;sh.paidYen=x.paidYen;sh.soldOut=x.soldOut?'Sold Out':'';
    sh.toBuy=Math.max(0,(num(sh.need)||0)-(num(x.bought)||0));sh.pending=true}}
  });
@@ -259,11 +269,11 @@ function customerList(){
  return VW.customers.filter(function(c){return !q||has(c.name,q)}).map(function(c){var id='c'+c.name,o=S.open[id],lines='',pays='';
   if(o){lines=VW.orders.filter(function(x){return x.customer===c.name}).map(function(x){return [esc(x.product)+' x'+esc(x.qty),chip(x.status)]});
    pays=VW.payments.filter(function(x){return x.customer===c.name}).map(function(x){return [esc(x.date),rp(x.amount)+(x.shipOnly==='Yes'?' (shipping)':'')]})}
-  return '<div class="card item" data-open="'+esc(id)+'"><div class="row" style="align-items:flex-start"><div class="nm"><b>'+esc(c.name)+'</b>'+(c.type?'<span class="customer-type">'+esc(c.type)+'</span>':'<span class="customer-type">No type</span>')+pend(c)+'</div><b>'+rp(c.balance)+'</b></div>'
+  return '<div class="card item" data-open="'+esc(id)+'"><div class="row" style="align-items:flex-start"><div class="nm"><b>'+esc(c.name)+'</b>'+(c.type?'<span class="customer-type">'+esc(c.type)+'</span>':'<span class="customer-type">No type</span>')+(c.member==='Yes'?'<span class="customer-type">Member</span>':'')+pend(c)+'</div><b>'+rp(c.balance)+'</b></div>'
   +'<div class="chips">'+chip(c.next)+chip(c.status,'')+'</div>'
-  +(o?det([['Contact',val(c.contact)],['Address',val(c.address)],['Courier',val(c.courier)],['Units (active / bought / waiting / to buy)',val(c.units)+' / '+val(c.bought)+' / '+val(c.waiting)+' / '+val(c.toBuy)],['Billable items',rp(c.billable)],['Items paid',rp(c.itemsPaid)],['Shipping fee / paid',rp(c.shipFee)+' / '+rp(c.shipPaid)],['Payment status',val(c.payStatus)],['Notes',val(c.notes)]])
+  +(o?det([['Contact',val(c.contact)],['Address',val(c.address)],['Courier',val(c.courier)],['Units (active / bought / waiting / to buy)',val(c.units)+' / '+val(c.bought)+' / '+val(c.waiting)+' / '+val(c.toBuy)],['Billable items',rp(c.billable)],['Items paid',rp(c.itemsPaid)],['Shipping fee / paid',rp(c.shipFee)+' / '+rp(c.shipPaid)],['Payment status',val(c.payStatus)],['Notes',val(c.notes)]].concat(icRows(c)))
    +(lines.length?det([['Order lines','']].concat(lines)):'')+(pays.length?det([['Payments','']].concat(pays)):'')
-   +'<div class="btns"><button class="btn ghost sm" data-act="editCustomer" data-name="'+esc(c.name)+'">Edit</button><button class="btn ghost sm" data-act="newOrder" data-name="'+esc(c.name)+'" data-kind="customer">+ Order</button><button class="btn ghost sm" data-act="newPayment" data-name="'+esc(c.name)+'">+ Payment</button></div>':'')+'</div>'}).join('')||'<div class="k">Nothing found</div>';
+   +'<div class="btns"><button class="btn ghost sm" data-act="editCustomer" data-name="'+esc(c.name)+'">Edit</button><button class="btn ghost sm" data-act="newOrder" data-name="'+esc(c.name)+'" data-kind="customer">+ Order</button><button class="btn ghost sm" data-act="newPayment" data-name="'+esc(c.name)+'">+ Payment</button>'+(c.member==='Yes'&&num(c.cashbackBalance)>0?'<button class="btn ghost sm" data-act="cashCredit" data-name="'+esc(c.name)+'">Use cashback as credit</button><button class="btn ghost sm" data-act="cashOut" data-name="'+esc(c.name)+'">Cashback transferred</button>':'')+'</div>':'')+'</div>'}).join('')||'<div class="k">Nothing found</div>';
 }
 function orders(){return bar('Search customer or product')+'<div id="list">'+orderList()+'</div>'}
 function orderList(){
@@ -496,11 +506,12 @@ function openCalc(){
 function calcUpdate(){
  var s=VW.settings,rate=num(VW.home.rate),p=num($('#c1').value),q=num($('#c2').value)||1,sc=num($('#c3').value)||0,r=$('#cr');
  if(bad(p)||p<=0){r.innerHTML='<span class="k">Enter a yen price</span>';return}
- var t1=p<=num(s.threshold),base=t1?p*num(s.t1Rate)+num(s.t1Fee):p*num(s.t2Rate),unit=base+sc;
- r.innerHTML='<div class="row"><span class="k">Rule used</span><span>'+(t1?'Tier 1 (up to '+yen(s.threshold)+')':'Tier 2 (above '+yen(s.threshold)+')')+'</span></div>'
+ var t1=p<num(s.threshold),base=t1?p*num(s.t1Rate)+num(s.t1Fee):p*num(s.t2Rate),unit=base+sc;
+ r.innerHTML='<div class="row"><span class="k">Rule used</span><span>'+(t1?'Tier 1 (below '+yen(s.threshold)+')':'Tier 2 ('+yen(s.threshold)+' and up)')+'</span></div>'
   +'<div class="row"><span class="k">Converted price</span><b>'+rp(base)+'</b></div>'
   +'<div class="row"><span class="k">Unit selling price</span><b>'+rp(unit)+'</b></div>'
   +'<div class="row"><span class="k">Total for '+q+'</span><b class="v">'+rp(unit*q)+'</b></div>'
+  +(s.icReady?(function(){var mu=selling(s,p,sc,'',true);return '<div class="row"><span class="k">Inner Circle unit price</span><b>'+rp(mu)+'</b></div><div class="row"><span class="k">Inner Circle total for '+q+'</span><b class="v">'+rp(mu*q)+'</b></div>'})():'')
   +(bad(rate)?'':'<div class="det"><div><span>Est. actual buying price (\u00a51 = Rp '+rate.toFixed(2)+')</span><span><b>'+rp(p*rate)+'</b></span></div>'+(q>1?'<div><span>Est. buying price for '+q+'</span><span>'+rp(p*rate*q)+'</span></div>':'')+'</div>');
 }
 function openOrder(pre){
@@ -570,13 +581,32 @@ function openCustomer(name){
   +selx('Type','f_type',['Trusted','New'],c?c.type:'New')+inp('Contact','f_contact','text',c?c.contact:'')+inp('Address','f_addr','text',c?c.address:'')
   +selx('Courier','f_cour',s.couriers,c?c.courier:'','(not chosen)')+inp('Shipping fee (Rp)','f_fee','number',c?c.shipFee:'','inputmode="numeric"')
   +selx('Status','f_status',['Shopping','Ready to Pack','Packed','Shipped','Delivered'],c?c.status:'Shopping')+inp('Notes','f_notes','text',c?c.notes:'')
+  +(s.icReady?dl('dlm',VW.customers.filter(function(x){return x.member==='Yes'}).map(function(x){return x.name}))+selx('Inner Circle member','f_member',['Yes'],c?c.member:'','No (regular)')+inp('Referred by (new buyer only)','f_ref','text',c?c.referredBy:'','list="dlm" autocomplete="off"'):'')
   +'<button class="btn" data-act="saveCustomer" data-edit="'+(c?'1':'')+'" style="width:100%">Save customer</button>');
 }
 function saveCustomer(edit){
  var name=val$('f_name');if(!name){alert('Name is required');return}
  if(!edit&&by(VW.customers,'name',name)){alert('This customer already exists. Open them in Customers and tap Edit.');return}
  var d={name:name,type:val$('f_type'),contact:val$('f_contact'),address:val$('f_addr'),courier:val$('f_cour'),shipFee:numOrBlank('f_fee'),status:val$('f_status'),notes:val$('f_notes')};
+ if(VW.settings.icReady){d.member=val$('f_member');d.referredBy=val$('f_ref');
+  if(d.referredBy){var rf=by(VW.customers,'name',d.referredBy);
+   if(!rf||rf.member!=='Yes'){alert('Referred by must be an Inner Circle member. Pick one from the list.');return}
+   if(lc(rf.name)===lc(name)){alert('A customer cannot refer themselves');return}
+   d.referredBy=rf.name}}
  enqueue(edit?'updateCustomer':'addCustomer',d,(edit?'Edit customer: ':'New customer: ')+name);afterSave();
+}
+function openCashback(name,mode){
+ var c=by(VW.customers,'name',name);if(!c)return;
+ showOv(head(mode==='credit'?'Use cashback as credit':'Cashback transferred')+'<div class="sub">'+esc(c.name)+' | balance '+rp(c.cashbackBalance)+'</div>'
+  +inp('Amount (Rp)','f_amt','number',num(c.cashbackBalance)||'','inputmode="numeric"')+(mode==='credit'?inp('Date','f_date','date',today()):'')
+  +'<div class="hint">'+(mode==='credit'?'Logged as a payment with the note "Referral credit", so it counts toward their invoice.':'Only lowers their cashback balance. Do the bank transfer yourself.')+'</div>'
+  +'<button class="btn" data-act="saveCashback" data-name="'+esc(c.name)+'" data-mode="'+mode+'" style="width:100%">Save</button>');
+}
+function saveCashback(name,mode){
+ var c=by(VW.customers,'name',name),amt=Number(val$('f_amt'));if(!c)return;
+ if(!(amt>0)){alert('Enter an amount above 0');return}
+ if(amt>(num(c.cashbackBalance)||0)){alert('Amount is above the cashback balance ('+rp(c.cashbackBalance)+')');return}
+ enqueue(mode==='credit'?'useCashbackCredit':'payoutCashback',{customer:c.name,amount:amt,date:val$('f_date')||today()},(mode==='credit'?'Cashback credit: ':'Cashback transferred: ')+c.name+' '+rp(amt));afterSave();
 }
 function openBuy(row){
  var s=null;VW.shopping.forEach(function(x){if(Number(x.row)===Number(row))s=x});if(!s)return;
@@ -650,6 +680,9 @@ document.addEventListener('click',function(e){
  else if(a==='newCustomer')openCustomer();
  else if(a==='editCustomer')openCustomer(n);
  else if(a==='saveCustomer')saveCustomer(!!t.dataset.edit);
+ else if(a==='cashCredit')openCashback(n,'credit');
+ else if(a==='cashOut')openCashback(n,'out');
+ else if(a==='saveCashback')saveCashback(n,t.dataset.mode);
  else if(a==='logBuy')openBuy(Number(t.dataset.row));
  else if(a==='saveBuy')saveBuy(Number(t.dataset.row));
  else if(a==='inc'||a==='dec'){var f=$('#f_b'),c=Number(f.value)||0;f.value=Math.max(0,c+(a==='inc'?1:-1))}

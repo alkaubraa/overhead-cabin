@@ -366,8 +366,8 @@ function invoiceMessage(name){
    +', sudah dibayar Rp '+fixed0(paid)
    +(balance>0?', sisa Rp '+fixed0(balance)+'.':balance<0?', kelebihan Rp '+fixed0(-balance)+' akan direfund atau dipakai untuk ongkir.':', sudah lunas.')
    +(soldOutAmount>0?' Barang sold out/unavailable akan dikembalikan 100% apabila sebelumnya sudah ada payment (Rp '+fixed0(soldOutAmount)+').':'');
- var logistic=((courier==='pickup'?' Untuk instruksi pickup akan diinfokan setelah pelunasan & barang sudah siap di-pickup yah.':courier==='belum dipilih'?' Mohon infokan apakah akan melakukan pengiriman via JNE, kurir instan GoSend/Grab, atau akan melakukan pemesanan pickup kurir sendiri.':shipping===0?' Ongkir belum termasuk dan akan dihitung sesuai kurir pilihanmu.':'')
-   +(courier!=='pickup'&&!address?' Juga mohon infokan alamat & kontak untuk pengiriman.':'')).trim();
+ var logistic=((courier==='pickup'?' Untuk instruksi pickup akan diinfokan setelah pelunasan & barang sudah siap di-pickup yah.':courier==='belum dipilih'?' Silakan infokan apakah akan melakukan pengiriman via JNE, kurir instan GoSend/Grab, atau akan melakukan pemesanan pickup kurir sendiri (lokasi Sudirman, Jakarta).':shipping===0?' Ongkir belum termasuk dan akan dihitung sesuai kurir pilihanmu.':'')
+   +(courier!=='pickup'&&!address?' Mohon sekalian infokan alamat & kontak untuk pengiriman.':'')).trim();
  var bank=String(settings.bankAccount||'').trim();
  var parts=[greet,recap,logistic,'Terima kasih!',bank?'Transfer ke '+bank:''].filter(function(t){return t!==''});
  var lines=parts.join('\n\n');

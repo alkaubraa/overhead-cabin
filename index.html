@@ -258,12 +258,16 @@ function bar(ph){return '<input id="q" type="search" placeholder="'+esc(ph)+'" v
 function pend(x){return x.pending?chip('Pending','info'):''}
 function catalog(){return bar('Search product or store')+'<div id="list">'+catalogList()+'</div>'}
 function catalogList(){
- var q=S.q.toLowerCase();
- return VW.products.filter(function(p){return !q||has(p.name,q)||has(p.store,q)}).map(function(p){var id='p'+p.name,o=S.open[id];
-  return '<div class="card item" data-open="'+esc(id)+'"><div class="row"><b>'+esc(p.name)+pend(p)+'</b><b>'+(p.selling!==''?rp(p.selling):'-')+'</b></div>'
-  +'<div class="sub">'+esc(p.store)+' | '+yen(p.yen)+(num(p.ordered)?' | ordered '+esc(p.ordered):'')+(p.ig==='Posted'?' | posted':'')+'</div>'
-  +(o?det([['Surcharge',rp(p.surcharge||0)],['Manual IDR price',p.manualIdr===''?'-':rp(p.manualIdr)],['IG label',val(p.label)],['Est. buying cost',rp(p.cost)],['Est. profit',rp(p.profit)+' ('+pct(p.margin)+')'],['IG status',val(p.ig)],['Notes',val(p.notes)],['Link',p.link?'<a href="'+esc(p.link)+'" target="_blank" rel="noopener">Open</a>':'-']])
-   +'<div class="btns"><button class="btn ghost sm" data-act="editProduct" data-name="'+esc(p.name)+'">Edit</button><button class="btn ghost sm" data-act="newOrder" data-name="'+esc(p.name)+'" data-kind="product">Order this</button></div>':'')+'</div>'}).join('')||'<div class="k">Nothing found</div>';
+ var q=S.q.toLowerCase(),products=VW.products.filter(function(p){return !q||has(p.name,q)||has(p.store,q)}),stores={};
+ products.forEach(function(p){var store=String(p.store||'').trim()||'No store yet';(stores[store]=stores[store]||[]).push(p)});
+ return Object.keys(stores).sort(function(a,b){if(a==='No store yet')return 1;if(b==='No store yet')return -1;return a.localeCompare(b,undefined,{sensitivity:'base'})}).map(function(store){
+  var items=stores[store].sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),undefined,{sensitivity:'base'})});
+  return '<section class="shop-brand"><div class="shop-brand-head"><span>'+esc(store)+'</span><b class="shop-count shop-count-brand">'+items.length+' '+(items.length===1?'PRODUCT':'PRODUCTS')+'</b></div>'+items.map(function(p){var id='p'+p.name,o=S.open[id];
+   return '<div class="card item" data-open="'+esc(id)+'"><div class="row"><b>'+esc(p.name)+pend(p)+'</b><b>'+(p.selling!==''?rp(p.selling):'-')+'</b></div>'
+   +'<div class="sub">'+esc(p.store)+' | '+yen(p.yen)+(num(p.ordered)?' | ordered '+esc(p.ordered):'')+(p.ig==='Posted'?' | posted':'')+'</div>'
+   +(o?det([['Surcharge',rp(p.surcharge||0)],['Manual IDR price',p.manualIdr===''?'-':rp(p.manualIdr)],['IG label',val(p.label)],['Est. buying cost',rp(p.cost)],['Est. profit',rp(p.profit)+' ('+pct(p.margin)+')'],['IG status',val(p.ig)],['Notes',val(p.notes)],['Link',p.link?'<a href="'+esc(p.link)+'" target="_blank" rel="noopener">Open</a>':'-']])
+    +'<div class="btns"><button class="btn ghost sm" data-act="editProduct" data-name="'+esc(p.name)+'">Edit</button><button class="btn ghost sm" data-act="newOrder" data-name="'+esc(p.name)+'" data-kind="product">Order this</button></div>':'')+'</div>'}).join('')+'</section>'
+ }).join('')||'<div class="k">Nothing found</div>';
 }
 function cashbackSummary(){
  var s=VW.settings;if(!s.icReady)return '';
@@ -278,7 +282,7 @@ function cashbackSummary(){
 function customers(){return cashbackSummary()+bar('Search customer')+'<div id="list">'+customerList()+'</div>'}
 function customerList(){
  var q=S.q.toLowerCase();
- return VW.customers.filter(function(c){return !q||has(c.name,q)}).map(function(c){var id='c'+c.name,o=S.open[id],lines='',pays='';
+ return VW.customers.slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),undefined,{sensitivity:'base'})}).filter(function(c){return !q||has(c.name,q)}).map(function(c){var id='c'+c.name,o=S.open[id],lines='',pays='';
   if(o){lines=VW.orders.filter(function(x){return x.customer===c.name}).map(function(x){return [esc(x.product)+' x'+esc(x.qty),chip(x.status)]});
    pays=VW.payments.filter(function(x){return x.customer===c.name}).map(function(x){return [esc(x.date),rp(x.amount)+(x.shipOnly==='Yes'?' (shipping)':'')]})}
   return '<div class="card item" data-open="'+esc(id)+'"><div class="row" style="align-items:flex-start"><div class="nm"><b>'+esc(c.name)+'</b>'+(c.type?'<span class="customer-type">'+esc(c.type)+'</span>':'<span class="customer-type">No type</span>')+(c.member==='Yes'?'<span class="customer-type">Inner Circle</span>':'')+pend(c)+'</div><b>'+rp(c.balance)+'</b></div>'
@@ -334,7 +338,7 @@ function payList(){
   return '<div class="card"><div class="row"><b>'+esc(p.customer)+pend(p)+'</b><b>'+rp(p.amount)+'</b></div><div class="sub">'+esc(p.date||'')+(p.shipOnly==='Yes'?' | shipping only':'')+(p.note?' | '+esc(p.note):'')+'</div><div class="btns"><button class="btn ghost sm" data-act="editPayment" data-row="'+p.row+'">Edit</button><button class="btn warn sm" data-act="deletePayment" data-row="'+p.row+'">Delete</button></div></div>'}).join('')||'<div class="k">Nothing found</div>';
 }
 function invoice(){
- var opts=VW.customers.map(function(c){return {v:c.name,l:c.name}}),chosen=S.invoiceCustomer||(VW.customers[0]?VW.customers[0].name:'');
+ var opts=VW.customers.slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),undefined,{sensitivity:'base'})}).map(function(c){return {v:c.name,l:c.name}}),chosen=S.invoiceCustomer||(opts[0]?opts[0].v:'');
  return '<div class="card"><div class="k">Choose customer</div><select id="invoiceCustomer">'+opts.map(function(o){return '<option value="'+esc(o.v)+'"'+(o.v===chosen?' selected':'')+'>'+esc(o.l)+'</option>'}).join('')+'</select><div class="btns"><button class="btn" data-act="downloadInvoiceImage">Download invoice</button><button class="btn ghost" data-act="copyInvoice">Copy message</button></div><div class="k" style="margin-top:10px">Message recap for '+esc(chosen)+'</div><textarea id="invoiceMessageText" rows="14" readonly style="width:100%;margin-top:6px">'+esc(invoiceMessage(chosen))+'</textarea></div>'+invoiceContent(chosen);
 }
 function invoiceContent(name){
@@ -528,7 +532,7 @@ function calcUpdate(){
 function openOrder(pre){
  pre=pre||{};
  showOv(head('New order')+dl('dlp',VW.products.map(function(p){return p.name}))
-  +selx('Customer','f_cust',[{v:'__new__',l:'+ New customer'}].concat(VW.customers.map(function(c){return {v:c.name,l:c.name}})),pre.customer||'','(choose customer)')+'<div id="newCustomerFields" style="display:none">'+inp('New customer name','f_newcust','text','','autocapitalize="words"')+'</div><div class="hint" id="h_cust"></div>'+(VW.settings.icReady?'<div id="nr" style="display:none">'+selx('Referred by (new customer)','f_oref',refOpts('',''),'','No referral')+'</div>':'')
+  +selx('Customer','f_cust',[{v:'__new__',l:'+ New customer'}].concat(VW.customers.slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),undefined,{sensitivity:'base'})}).map(function(c){return {v:c.name,l:c.name}})),pre.customer||'','(choose customer)')+'<div id="newCustomerFields" style="display:none">'+inp('New customer name','f_newcust','text','','autocapitalize="words"')+'</div><div class="hint" id="h_cust"></div>'+(VW.settings.icReady?'<div id="nr" style="display:none">'+selx('Referred by (new customer)','f_oref',refOpts('',''),'','No referral')+'</div>':'')
   +inp('Product','f_prod','text',pre.product||'','list="dlp" autocomplete="off"')+'<div class="hint" id="h_prod"></div>'
   +'<div id="np" style="display:none">'+inp('Price in yen (new product)','f_yen','number','','inputmode="decimal"')+selx('Bulky surcharge','f_sur',surOpts(),'','(none)')+selx('Store','f_store',storeOpts(),'','(not sure yet)')+'</div>'
   +inp('Variant (optional)','f_variant','text','','autocomplete="off"')+inp('Qty','f_qty','number','1','inputmode="numeric" min="1"')+inp('Date','f_date','date',today())+inp('Note (optional)','f_note','text','')
@@ -555,7 +559,7 @@ function saveOrder(){
 function openPayment(pre){
  pre=pre||{};
  showOv(head('New payment')
-  +selx('Customer','f_cust',VW.customers.map(function(c){return {v:c.name,l:c.name}}),pre.customer||'','(choose customer)')
+  +selx('Customer','f_cust',VW.customers.slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),undefined,{sensitivity:'base'})}).map(function(c){return {v:c.name,l:c.name}}),pre.customer||'','(choose customer)')
   +inp('Amount (Rp)','f_amt','number','','inputmode="numeric"')+inp('Date','f_date','date',today())
   +'<label class="tgl"><input type="checkbox" id="f_ship"> Shipping fee only</label>'+inp('Note (optional)','f_note','text','')
   +'<button class="btn" data-act="savePayment" style="width:100%">Save payment</button>');

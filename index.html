@@ -129,6 +129,11 @@ a{color:var(--acc)}
 .shop-count-variant{display:none}
 .shop-sep{opacity:.55}
 @media(max-width:600px){.shop-brand{margin:14px 0 18px;padding:14px;border-radius:14px}.shop-model{margin:0}.shop-model-head{font-size:15px}.shop-variant{padding:5px 0;gap:8px}.shop-variant-detail{font-size:12px}}
+
+.order-sort-wrap{display:grid;grid-template-columns:minmax(90px,auto) minmax(0,1fr);align-items:center;gap:10px;margin:0 0 10px}
+.order-sort-wrap label{display:block;min-width:0}
+.order-sort-wrap select{display:block;width:100%;min-width:0;margin:0;white-space:normal}
+@media(max-width:600px){.order-sort-wrap{grid-template-columns:1fr;gap:2px}.order-sort-wrap select{margin:0 0 4px}}
 </style>
 </head>
 <body>
@@ -295,7 +300,7 @@ function customerList(){
    +(lines.length?det([['Order lines','']].concat(lines)):'')+(pays.length?det([['Payments','']].concat(pays)):'')
    +'<div class="btns"><button class="btn ghost sm" data-act="editCustomer" data-name="'+esc(c.name)+'">Edit</button><button class="btn ghost sm" data-act="newOrder" data-name="'+esc(c.name)+'" data-kind="customer">+ Order</button><button class="btn ghost sm" data-act="newPayment" data-name="'+esc(c.name)+'">+ Payment</button>'+(c.member==='Yes'&&num(c.cashbackBalance)>0?'<button class="btn ghost sm" data-act="cashCredit" data-name="'+esc(c.name)+'">Use cashback as credit</button><button class="btn ghost sm" data-act="cashOut" data-name="'+esc(c.name)+'">Cashback transferred</button>':'')+'</div>':'')+'</div>'}).join('')||'<div class="k">Nothing found</div>';
 }
-function orders(){return '<div class="row" style="margin-bottom:10px"><span class="k">Sort orders</span><select id="orderSort"><option value="recent"'+(S.orderSort==='recent'?' selected':'')+'>Order date (newest first)</option><option value="customer"'+(S.orderSort==='customer'?' selected':'')+'>Customer (A–Z)</option></select></div>'+bar('Search customer or product')+'<div id="list">'+orderList()+'</div>'}
+function orders(){return '<div class="order-sort-wrap"><label class="k" for="orderSort">Sort orders</label><select id="orderSort"><option value="recent"'+(S.orderSort==='recent'?' selected':'')+'>Order date (newest first)</option><option value="customer"'+(S.orderSort==='customer'?' selected':'')+'>Customer (A–Z)</option></select></div>'+bar('Search customer or product')+'<div id="list">'+orderList()+'</div>'}
 function orderList(){
  var q=S.q.toLowerCase(),arr=VW.orders.slice().filter(function(o){return !q||has(o.customer,q)||has(o.product,q)});
  if(S.orderSort==='customer')arr.sort(function(a,b){var c=String(a.customer||'').localeCompare(String(b.customer||''),undefined,{sensitivity:'base'});return c||String(a.date||'').localeCompare(String(b.date||''))});
@@ -530,9 +535,9 @@ function calcUpdate(){
 }
 function openOrder(pre){
  pre=pre||{};
- showOv(head('New order')+dl('dlp',VW.products.slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),undefined,{sensitivity:'base'})}).map(function(p){return p.name}))
+ showOv(head('New order')
   +selx('Customer','f_cust',[{v:'__new__',l:'+ New customer'}].concat(VW.customers.slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),undefined,{sensitivity:'base'})}).map(function(c){return {v:c.name,l:c.name}})),pre.customer||'','(choose customer)')+'<div id="newCustomerFields" style="display:none">'+inp('New customer name','f_newcust','text','','autocapitalize="words"')+'</div><div class="hint" id="h_cust"></div>'+(VW.settings.icReady?'<div id="nr" style="display:none">'+selx('Referred by (new customer)','f_oref',refOpts('',''),'','No referral')+'</div>':'')
-  +inp('Product','f_prod','text',pre.product||'','list="dlp" autocomplete="off"')+'<div class="hint" id="h_prod"></div>'
+  +selx('Choose from catalogue (optional)','f_catalogprod',VW.products.slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),undefined,{sensitivity:'base'})}).map(function(p){return {v:p.name,l:p.name}}),pre.product||'','(select a catalog product)')+inp('Product (or enter manually)','f_prod','text',pre.product||'','autocomplete="off"')+'<div class="hint" id="h_prod"></div>'
   +'<div id="np" style="display:none">'+inp('Price in yen (new product)','f_yen','number','','inputmode="decimal"')+selx('Bulky surcharge','f_sur',surOpts(),'','(none)')+selx('Store','f_store',storeOpts(),'','(not sure yet)')+'</div>'
   +inp('Variant (optional)','f_variant','text','','autocomplete="off"')+inp('Qty','f_qty','number','1','inputmode="numeric" min="1"')+inp('Date','f_date','date',today())+inp('Note (optional)','f_note','text','')
   +'<button class="btn" data-act="saveOrder" style="width:100%">Save order</button>');
@@ -720,12 +725,13 @@ document.addEventListener('input',function(e){
  var id=e.target.id;
  if(id==='q'){S.q=e.target.value;$('#list').innerHTML=LISTS[S.tab]()}
  else if(id==='c1'||id==='c2'){calcUpdate()}
- else if(id==='f_cust'||id==='f_prod'){if(form==='order')orderHints()}
+ else if(id==='f_cust'||id==='f_prod'){if(form==='order'){if(id==='f_prod'&&$('#f_catalogprod')&&$('#f_catalogprod').value!==e.target.value)$('#f_catalogprod').value='';orderHints()}}
 });
 document.addEventListener('change',function(e){
  if(e.target.id==='onlyBuy'){S.onlyBuy=e.target.checked;$('#list').innerHTML=shopList()}
  else if(e.target.id==='invoiceCustomer'){S.invoiceCustomer=e.target.value;render()}
  else if(e.target.id==='orderSort'){S.orderSort=e.target.value;$('#list').innerHTML=orderList()}
+ else if(e.target.id==='f_catalogprod'){if(form==='order'&&e.target.value){$('#f_prod').value=e.target.value;orderHints()}}
  else if(e.target.id==='c3'){calcUpdate()}
 });
 window.addEventListener('online',function(){if(cfg.url&&cfg.key)sync()});

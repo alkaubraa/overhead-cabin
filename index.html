@@ -117,7 +117,8 @@ a{color:var(--acc)}
 .shop-count{flex:0 0 auto;white-space:nowrap;font-variant-numeric:tabular-nums}
 .shop-count.is-buy{color:var(--warn)} .shop-count.is-done{color:var(--good)} .shop-count.is-out{color:var(--bad)}
 .shop-count-brand{font-size:13px;letter-spacing:0;padding:0;border:0;border-radius:0;background:transparent;color:var(--warn)!important;font-weight:750;text-transform:none}
-.shop-model{display:block;margin:0;min-width:0;padding:12px 0 0}
+.shop-model{display:block;margin:10px 0 0;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.shop-variant-line{display:block;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:transparent;color:var(--mute);padding:8px 0 2px;margin-top:5px;font-size:13px;line-height:1.5;overflow-wrap:anywhere}.shop-variant-line:first-of-type{border-top:0;margin-top:0}.shop-variant-line:hover{color:var(--ink)}
 .shop-model+.shop-model{border-top:1px solid var(--line);margin-top:14px}
 .shop-model-head{font-size:16px;font-weight:750;padding:0 0 8px;border:0}
 .shop-count-model{font-size:14px;font-weight:700;padding:0;border:0;border-radius:0;background:transparent;color:var(--ink)!important}
@@ -147,7 +148,7 @@ var val=function(v){return v===''||v==null?'-':esc(v)};
 var today=function(){return new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10)};
 var ls={get:function(k){try{return localStorage.getItem(k)}catch(e){return null}},set:function(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 
-var S={tab:'home',q:'',onlyBuy:false,open:{},msg:'',loading:false,setup:false,invoiceCustomer:''};
+var S={tab:'home',q:'',onlyBuy:false,open:{},msg:'',loading:false,setup:false,invoiceCustomer:'',orderSort:'recent'};
 var cfg={url:ls.get('oc_url')||'',key:ls.get('oc_key')||''};
 var D=null,AT=ls.get('oc_at'),Q=[],VW=null,form=null;
 try{D=JSON.parse(ls.get('oc_data')||'null')}catch(e){D=null}
@@ -294,10 +295,12 @@ function customerList(){
    +(lines.length?det([['Order lines','']].concat(lines)):'')+(pays.length?det([['Payments','']].concat(pays)):'')
    +'<div class="btns"><button class="btn ghost sm" data-act="editCustomer" data-name="'+esc(c.name)+'">Edit</button><button class="btn ghost sm" data-act="newOrder" data-name="'+esc(c.name)+'" data-kind="customer">+ Order</button><button class="btn ghost sm" data-act="newPayment" data-name="'+esc(c.name)+'">+ Payment</button>'+(c.member==='Yes'&&num(c.cashbackBalance)>0?'<button class="btn ghost sm" data-act="cashCredit" data-name="'+esc(c.name)+'">Use cashback as credit</button><button class="btn ghost sm" data-act="cashOut" data-name="'+esc(c.name)+'">Cashback transferred</button>':'')+'</div>':'')+'</div>'}).join('')||'<div class="k">Nothing found</div>';
 }
-function orders(){return bar('Search customer or product')+'<div id="list">'+orderList()+'</div>'}
+function orders(){return '<div class="row" style="margin-bottom:10px"><span class="k">Sort orders</span><select id="orderSort"><option value="recent"'+(S.orderSort==='recent'?' selected':'')+'>Order date (newest first)</option><option value="customer"'+(S.orderSort==='customer'?' selected':'')+'>Customer (A–Z)</option></select></div>'+bar('Search customer or product')+'<div id="list">'+orderList()+'</div>'}
 function orderList(){
- var q=S.q.toLowerCase();
- return VW.orders.slice().reverse().filter(function(o){return !q||has(o.customer,q)||has(o.product,q)}).map(function(o){
+ var q=S.q.toLowerCase(),arr=VW.orders.slice().filter(function(o){return !q||has(o.customer,q)||has(o.product,q)});
+ if(S.orderSort==='customer')arr.sort(function(a,b){var c=String(a.customer||'').localeCompare(String(b.customer||''),undefined,{sensitivity:'base'});return c||String(a.date||'').localeCompare(String(b.date||''))});
+ else arr.reverse();
+ return arr.map(function(o){
   return '<div class="card'+(o.cancel==='Yes'?' muted':'')+'"><div class="row"><b>'+esc(o.customer)+'</b><b>'+rp(o.gross)+'</b></div>'
   +'<div>'+esc(o.product)+' x'+esc(o.qty)+chip(o.status)+'</div>'+(o.variant?'<div class="sub">'+esc(o.variant)+'</div>':'')
   +'<div class="row"><div class="sub">'+esc(o.date||'')+(o.note?' | '+esc(o.note):'')+' | bought '+val(o.bought)+', to buy '+val(o.toBuy)+'</div>'
@@ -305,26 +308,19 @@ function orderList(){
 }
 function shopping(){return '<label class="tgl"><input type="checkbox" id="onlyBuy"'+(S.onlyBuy?' checked':'')+'> Only products still to buy</label><div class="sub" style="margin:0 2px 8px">Tap a product to log what you bought.</div><div id="list">'+shopList()+'</div>'}
 function shopList(){
- var NS='No store yet',L=VW.shopping.filter(function(s){return !S.onlyBuy||num(s.toBuy)>0});
- var brands={};
- L.forEach(function(s){
-  var brand=String(s.store||'').trim()||NS;
-  (brands[brand]=brands[brand]||[]).push(s);
- });
- return Object.keys(brands).sort(function(a,b){if(a===NS)return 1;if(b===NS)return -1;return a.localeCompare(b)}).map(function(brand){
-  var items=brands[brand],brandToBuy=items.reduce(function(a,s){return a+(num(s.toBuy)||0)},0),models={};
-  items.forEach(function(s){var model=String(s.product||'').trim();(models[model]=models[model]||[]).push(s)});
-  var html='<section class="shop-brand"><div class="shop-brand-head"><span>'+esc(brand)+'</span><b class="shop-count shop-count-brand '+(brandToBuy>0?'is-buy':'is-done')+'">'+(brandToBuy>0?brandToBuy+' TO BUY':'DONE')+'</b></div>';
-  Object.keys(models).sort().forEach(function(model){
-   var variants=models[model],modelToBuy=variants.reduce(function(a,s){return a+(num(s.toBuy)||0)},0);
-   html+='<div class="shop-model"><div class="shop-model-head"><span>'+esc(model)+'</span><b class="shop-count shop-count-model '+(modelToBuy>0?'is-buy':'is-done')+'">'+(modelToBuy>0?modelToBuy+' to buy':'Done')+'</b></div>';
-   variants.forEach(function(s){
-    var out=s.soldOut==='Sold Out',tb=num(s.toBuy)||0,st=out?'out':tb>0?'buy':'done';
-    var variant=String(s.variant||s.color||s.size||'').trim();
-    var detail='Bought '+(num(s.bought)||0)+', to buy '+tb;
-    if(s.paidYen!==''&&s.paidYen!=null)detail+=' <span class="shop-sep">·</span> Paid '+yen(s.paidYen);
-    if(num(s.waiting)>0)detail+=' <span class="shop-sep">·</span> '+s.waiting+' waiting for payment';
-    html+='<button type="button" class="shop-product-card s-'+st+'" data-act="logBuy" data-row="'+s.row+'"><span class="shop-product-title"><span>'+esc(model)+(variant?' — '+esc(variant):'')+'</span><b class="shop-count shop-count-model '+(tb>0?'is-buy':'is-done')+'">'+(tb>0?tb+' to buy':'Done')+'</b></span><div class="shop-product-detail">'+detail+'</div></button>';
+ var NS='No store yet',L=VW.shopping.filter(function(s){return !S.onlyBuy||num(s.toBuy)>0}),stores={};
+ L.forEach(function(s){var store=String(s.store||'').trim()||NS;(stores[store]=stores[store]||[]).push(s)});
+ return Object.keys(stores).sort(function(a,b){if(a===NS)return 1;if(b===NS)return -1;return a.localeCompare(b,undefined,{sensitivity:'base'})}).map(function(store){
+  var items=stores[store],storeToBuy=items.reduce(function(a,s){return a+(num(s.toBuy)||0)},0),products={};
+  items.forEach(function(s){var product=String(s.product||'').trim();(products[product]=products[product]||[]).push(s)});
+  var html='<section class="shop-brand"><div class="shop-brand-head"><span>'+esc(store)+'</span><b class="shop-count shop-count-brand '+(storeToBuy>0?'is-buy':'is-done')+'">'+(storeToBuy>0?storeToBuy+' TO BUY':'DONE')+'</b></div>';
+  Object.keys(products).sort(function(a,b){return a.localeCompare(b,undefined,{sensitivity:'base'})}).forEach(function(product){
+   var variants=products[product],productToBuy=variants.reduce(function(a,s){return a+(num(s.toBuy)||0)},0);
+   html+='<div class="shop-model"><div class="shop-model-head"><span>'+esc(product)+'</span><b class="shop-count '+(productToBuy>0?'is-buy':'is-done')+'">'+(productToBuy>0?productToBuy+' to buy':'Done')+'</b></div>';
+   variants.slice().sort(function(a,b){return String(a.variant||a.color||a.size||'').localeCompare(String(b.variant||b.color||b.size||''),undefined,{sensitivity:'base'})}).forEach(function(s){
+    var tb=num(s.toBuy)||0,variant=String(s.variant||s.color||s.size||'').trim(),detail='Bought '+(num(s.bought)||0)+', to buy '+tb;
+    if(s.paidYen!==''&&s.paidYen!=null)detail+=' · Paid '+yen(s.paidYen);if(num(s.waiting)>0)detail+=' · '+s.waiting+' waiting for payment';
+    html+='<button type="button" class="shop-variant-line" data-act="logBuy" data-row="'+s.row+'"><span>'+esc(variant||'Standard')+' | '+detail+'</span></button>';
    });
    html+='</div>';
   });
@@ -534,7 +530,7 @@ function calcUpdate(){
 }
 function openOrder(pre){
  pre=pre||{};
- showOv(head('New order')+dl('dlp',VW.products.map(function(p){return p.name}))
+ showOv(head('New order')+dl('dlp',VW.products.slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),undefined,{sensitivity:'base'})}).map(function(p){return p.name}))
   +selx('Customer','f_cust',[{v:'__new__',l:'+ New customer'}].concat(VW.customers.slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),undefined,{sensitivity:'base'})}).map(function(c){return {v:c.name,l:c.name}})),pre.customer||'','(choose customer)')+'<div id="newCustomerFields" style="display:none">'+inp('New customer name','f_newcust','text','','autocapitalize="words"')+'</div><div class="hint" id="h_cust"></div>'+(VW.settings.icReady?'<div id="nr" style="display:none">'+selx('Referred by (new customer)','f_oref',refOpts('',''),'','No referral')+'</div>':'')
   +inp('Product','f_prod','text',pre.product||'','list="dlp" autocomplete="off"')+'<div class="hint" id="h_prod"></div>'
   +'<div id="np" style="display:none">'+inp('Price in yen (new product)','f_yen','number','','inputmode="decimal"')+selx('Bulky surcharge','f_sur',surOpts(),'','(none)')+selx('Store','f_store',storeOpts(),'','(not sure yet)')+'</div>'
@@ -729,6 +725,7 @@ document.addEventListener('input',function(e){
 document.addEventListener('change',function(e){
  if(e.target.id==='onlyBuy'){S.onlyBuy=e.target.checked;$('#list').innerHTML=shopList()}
  else if(e.target.id==='invoiceCustomer'){S.invoiceCustomer=e.target.value;render()}
+ else if(e.target.id==='orderSort'){S.orderSort=e.target.value;$('#list').innerHTML=orderList()}
  else if(e.target.id==='c3'){calcUpdate()}
 });
 window.addEventListener('online',function(){if(cfg.url&&cfg.key)sync()});

@@ -107,8 +107,10 @@ a{color:var(--acc)}
 @media print{body *{visibility:hidden}.invoice-paper,.invoice-paper *{visibility:visible}.invoice-paper{position:absolute;left:0;top:0;width:100%;margin:0;border:0}}
 
 
-/* Shopping hierarchy: brand/store card, product totals, plain variant rows */
+/* Shopping hierarchy: store cards containing product + variant cards */
 .shop-brand{display:block;margin:16px 0 22px;min-width:0;padding:16px 18px;border:1px solid var(--line);border-radius:16px;background:color-mix(in srgb,var(--panel) 78%,transparent)}
+.shop-product-card{display:block;margin:10px 0 0;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--panel);width:100%;box-sizing:border-box;text-align:left;color:var(--ink)}
+.shop-product-title{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;font-weight:750;min-width:0}.shop-product-title span:first-child{min-width:0;overflow-wrap:anywhere}.shop-product-detail{font-size:13px;line-height:1.5;color:var(--mute);margin-top:6px;overflow-wrap:anywhere}
 .shop-brand-head,.shop-model-head{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;min-width:0}
 .shop-brand-head{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--warn);font-weight:800;padding:0 0 12px}
 .shop-brand-head span,.shop-model-head span{min-width:0;overflow-wrap:anywhere}
@@ -172,7 +174,8 @@ function applyQueue(d,q){
   if(it.action==='addCustomer'){if(!by(v.customers,'name',x.name))v.customers.push({name:x.name,type:x.type||'New',contact:x.contact||'',address:x.address||'',courier:x.courier||'',units:0,bought:0,waiting:0,toBuy:0,billable:0,itemsPaid:0,shipFee:x.shipFee||'',shipPaid:0,balance:0,payStatus:'No order',status:x.status||'Shopping',next:'No items yet',notes:x.notes||'',member:x.member||'',referredBy:x.referredBy||'',referralStatus:'',cashbackEarned:'',creditUsed:'',cashbackOut:'',cashbackBalance:'',pending:true})}
   else if(it.action==='updateCustomer'){c=by(v.customers,'name',x.name);if(c){['type','contact','address','courier','shipFee','status','notes','member','referredBy'].forEach(function(k){if(k in x)c[k]=x[k]});c.pending=true}}
   else if(it.action==='addProduct'){if(!by(v.products,'name',x.name))v.products.push({name:x.name,store:x.store||'',yen:x.yen,surcharge:x.surcharge,manualIdr:x.manualIdr,link:x.link||'',ig:x.ig||'Not posted',notes:x.notes||'',selling:selling(s,x.yen,x.surcharge,x.manualIdr),ordered:0,pending:true})}
-  else if(it.action==='updateProduct'){p=by(v.products,'name',x.name);if(p){['store','yen','surcharge','manualIdr','link','ig','notes'].forEach(function(k){if(k in x)p[k]=x[k]});p.selling=selling(s,p.yen,p.surcharge,p.manualIdr);p.pending=true}}
+  else if(it.action==='updateProduct'){p=by(v.products,'name',x.oldName||x.name);if(p){p.name=x.name;['store','yen','surcharge','manualIdr','link','ig','notes'].forEach(function(k){if(k in x)p[k]=x[k]});p.selling=selling(s,p.yen,p.surcharge,p.manualIdr);p.pending=true}}
+  else if(it.action==='deleteProduct'){v.products=v.products.filter(function(p){return p.name!==x.name})}
   else if(it.action==='addStore'){if(s.stores.map(lc).indexOf(lc(x.name))<0)s.stores.push(x.name)}
   else if(it.action==='addOrder'){p=by(v.products,'name',x.product);cm=by(v.customers,'name',x.customer);var mem=!!(cm&&cm.member==='Yes');var u=p?((mem&&!(num(p.manualIdr)>0)&&num(p.yen)>0)?selling(s,p.yen,p.surcharge,'',true):p.selling):selling(s,x.yen,x.surcharge,'',mem);
    v.orders.push({customer:x.customer,product:x.product,qty:x.qty,variant:x.variant||'',note:x.note||'',date:x.date,cancel:'',unit:u,gross:u===''?'':u*x.qty,bought:'',toBuy:'',waiting:'',status:'Pending',pending:true})}
@@ -318,10 +321,10 @@ function shopList(){
    variants.forEach(function(s){
     var out=s.soldOut==='Sold Out',tb=num(s.toBuy)||0,st=out?'out':tb>0?'buy':'done';
     var variant=String(s.variant||s.color||s.size||'').trim();
-    var detail=(variant?esc(variant)+' <span class="shop-sep">|</span> ':'')+'Bought '+(num(s.bought)||0)+', to buy '+tb;
+    var detail='Bought '+(num(s.bought)||0)+', to buy '+tb;
     if(s.paidYen!==''&&s.paidYen!=null)detail+=' <span class="shop-sep">·</span> Paid '+yen(s.paidYen);
     if(num(s.waiting)>0)detail+=' <span class="shop-sep">·</span> '+s.waiting+' waiting for payment';
-    html+='<button type="button" class="shop-variant s-'+st+'" data-act="logBuy" data-row="'+s.row+'"><span class="shop-variant-detail">'+detail+'</span></button>';
+    html+='<button type="button" class="shop-product-card s-'+st+'" data-act="logBuy" data-row="'+s.row+'"><span class="shop-product-title"><span>'+esc(model)+(variant?' — '+esc(variant):'')+'</span><b class="shop-count shop-count-model '+(tb>0?'is-buy':'is-done')+'">'+(tb>0?tb+' to buy':'Done')+'</b></span><div class="shop-product-detail">'+detail+'</div></button>';
    });
    html+='</div>';
   });
@@ -576,20 +579,25 @@ function savePaymentEdit(row){var p=paymentByRow(row),amt=Number(val$('f_amt'));
 function deletePayment(row){var p=paymentByRow(row);if(!p)return;if(!confirm('Delete this payment of '+rp(p.amount)+' from '+p.customer+'?'))return;enqueue('deletePayment',{row:row,expectCustomer:p.customer,expectAmount:p.amount},'Delete payment: '+p.customer+' '+rp(p.amount));afterSave()}
 function openProduct(name){
  var p=name?by(VW.products,'name',name):null,s=VW.settings;
- showOv(head(p?'Edit product':'New product')+inp('Name','f_name','text',p?p.name:'',p?'readonly':'autocapitalize="words"')
+ showOv(head(p?'Edit product':'New product')+inp('Name','f_name','text',p?p.name:'','autocapitalize="words"')
   +selx('Store','f_store',storeOpts(),p?p.store:'','(choose)')+inp('Or type a new store','f_newstore','text','')
   +inp('Price in yen','f_yen','number',p?p.yen:'','inputmode="decimal"')+selx('Bulky surcharge','f_sur',surOpts(),p?p.surcharge:'','(none)')
   +inp('Manual IDR price (optional)','f_man','number',p?p.manualIdr:'','inputmode="numeric"')+inp('Link','f_link','url',p?p.link:'','autocapitalize="off"')
   +selx('IG status','f_ig',['Not posted','Posted','Skip'],p?p.ig:'Not posted')+inp('Notes','f_notes','text',p?p.notes:'')
-  +'<button class="btn" data-act="saveProduct" data-edit="'+(p?'1':'')+'" style="width:100%">Save product</button>');
+  +'<button class="btn" data-act="saveProduct" data-edit="'+(p?'1':'')+'" data-oldname="'+(p?esc(p.name):'')+'" style="width:100%">Save product</button>'+(p?'<button class="btn warn" data-act="deleteProduct" data-name="'+esc(p.name)+'" style="width:100%;margin-top:8px">Delete product</button>':''));
 }
-function saveProduct(edit){
+function deleteProduct(name){
+ var p=by(VW.products,'name',name);if(!p)return;
+ if(!confirm('Delete product “'+name+'” from the catalog? Existing order and shopping records will not be deleted.'))return;
+ enqueue('deleteProduct',{name:name},'Delete product: '+name);afterSave();
+}
+function saveProduct(edit,oldName){
  var name=val$('f_name'),ns=val$('f_newstore'),store=ns||val$('f_store'),yv=numOrBlank('f_yen'),man=numOrBlank('f_man');
  if(!name){alert('Name is required');return}
  if(!edit&&by(VW.products,'name',name)){alert('This product already exists. Open it in the Catalog and tap Edit.');return}
  if(!(yv>0)&&!(man>0)){alert('Enter a yen price or a manual IDR price');return}
  if(ns&&VW.settings.stores.map(lc).indexOf(lc(ns))<0)enqueue('addStore',{name:ns},'New store: '+ns);
- var d={name:name,store:store,yen:yv,surcharge:numOrBlank('f_sur'),manualIdr:man,link:val$('f_link'),ig:val$('f_ig'),notes:val$('f_notes')};
+ var d={name:name,oldName:edit?(oldName||name):undefined,store:store,yen:yv,surcharge:numOrBlank('f_sur'),manualIdr:man,link:val$('f_link'),ig:val$('f_ig'),notes:val$('f_notes')};
  enqueue(edit?'updateProduct':'addProduct',d,(edit?'Edit product: ':'New product: ')+name);afterSave();
 }
 function openCustomer(name){
@@ -693,7 +701,8 @@ document.addEventListener('click',function(e){
  else if(a==='copyInvoice'){var im=invoiceMessage(S.invoiceCustomer||($('#invoiceCustomer')?$('#invoiceCustomer').value:''));if(im&&navigator.clipboard)navigator.clipboard.writeText(im).then(function(){alert('Message copied.')},function(){prompt('Copy this message:',im)});else prompt('Copy this message:',im)}
  else if(a==='newProduct')openProduct();
  else if(a==='editProduct')openProduct(n);
- else if(a==='saveProduct')saveProduct(!!t.dataset.edit);
+ else if(a==='saveProduct')saveProduct(!!t.dataset.edit,t.dataset.oldname);
+ else if(a==='deleteProduct')deleteProduct(n);
  else if(a==='newCustomer')openCustomer();
  else if(a==='editCustomer')openCustomer(n);
  else if(a==='saveCustomer')saveCustomer(!!t.dataset.edit);
